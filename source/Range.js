@@ -159,7 +159,7 @@ var deleteContentsOfRange = function ( range ) {
     // Ensure body has a block-level element in it.
     var body = range.endContainer.ownerDocument.body,
         child = body.firstChild;
-    if ( !child || child.nodeName === 'BR' ) {
+    if ( !child || child.nodeName === 'BR' || child.nodeName === 'WBR' ) {
         fixCursor( body );
         range.selectNodeContents( body.firstChild );
     }
@@ -192,11 +192,14 @@ var insertTreeFragmentIntoRange = function ( range, frag ) {
         insertNodeInRange( range, frag );
         range.collapse( false );
     }
-    // Otherwise, split up to body, insert inline before and after split
-    // and insert block in between split, then merge containers.
+    // Otherwise, split up to blockquote (if a parent) or body, insert inline
+    // before and after split and insert block in between split, then merge
+    // containers.
     else {
-        var nodeAfterSplit = split( range.startContainer, range.startOffset,
-                range.startContainer.ownerDocument.body ),
+        var splitPoint = range.startContainer,
+            nodeAfterSplit = split( splitPoint, range.startOffset,
+                getNearest( splitPoint.parentNode, 'BLOCKQUOTE' ) ||
+                splitPoint.ownerDocument.body ),
             nodeBeforeSplit = nodeAfterSplit.previousSibling,
             startContainer = nodeBeforeSplit,
             startOffset = startContainer.childNodes.length,
@@ -207,13 +210,15 @@ var insertTreeFragmentIntoRange = function ( range, frag ) {
 
         while ( ( child = startContainer.lastChild ) &&
                 child.nodeType === ELEMENT_NODE &&
-                child.nodeName !== 'BR' ) {
+                child.nodeName !== 'BR'  &&
+                child.nodeName !== 'WBR' ) {
             startContainer = child;
             startOffset = startContainer.childNodes.length;
         }
         while ( ( child = endContainer.firstChild ) &&
                 child.nodeType === ELEMENT_NODE &&
-                child.nodeName !== 'BR' ) {
+                child.nodeName !== 'BR'  &&
+                child.nodeName !== 'WBR' ) {
             endContainer = child;
         }
         while ( ( child = frag.firstChild ) && isInline( child ) ) {
