@@ -321,7 +321,12 @@ function fixCursor ( node ) {
             child = node.firstChild;
         }
         if ( !child ) {
-            fixer = doc.createTextNode( '' );
+            if ( cantFocusEmptyTextNodes ) {
+                fixer = doc.createTextNode( ZWS );
+                this._didAddZWS();
+            } else {
+                fixer = doc.createTextNode( '' );
+            }
         }
     } else {
         if ( useTextFixer ) {
@@ -787,6 +792,10 @@ var insertTreeFragmentIntoRange = function ( range, frag ) {
     // before and after split and insert block in between split, then merge
     // containers.
     else {
+        var block = getStartBlockOfRange( range );
+        removeZWS( block );
+        removeEmptyInlines( block );
+        fixCursor( block );
         var splitPoint = range.startContainer,
             nodeAfterSplit = split( splitPoint, range.startOffset,
                 getNearest( splitPoint.parentNode, 'BLOCKQUOTE' ) ||
@@ -1841,7 +1850,12 @@ proto._removeFormat = function ( tag, attributes, range, partial ) {
     var doc = this._doc,
         fixer;
     if ( range.collapsed ) {
-        fixer = doc.createTextNode( '' );
+        if ( cantFocusEmptyTextNodes ) {
+            fixer = doc.createTextNode( ZWS );
+            this._didAddZWS();
+        } else {
+            fixer = doc.createTextNode( '' );
+        }
         insertNodeInRange( range, fixer );
     }
 
