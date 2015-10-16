@@ -191,7 +191,7 @@ function fixCursor ( node ) {
         if ( !child ) {
             if ( cantFocusEmptyTextNodes ) {
                 fixer = doc.createTextNode( ZWS );
-                this._didAddZWS();
+                getSquireInstance( doc )._didAddZWS();
             } else {
                 fixer = doc.createTextNode( '' );
             }
