@@ -196,6 +196,10 @@ var insertTreeFragmentIntoRange = function ( range, frag ) {
     // before and after split and insert block in between split, then merge
     // containers.
     else {
+        var block = getStartBlockOfRange( range );
+        removeZWS( block );
+        removeEmptyInlines( block );
+        fixCursor( block );
         var splitPoint = range.startContainer,
             nodeAfterSplit = split( splitPoint, range.startOffset,
                 getNearest( splitPoint.parentNode, 'BLOCKQUOTE' ) ||

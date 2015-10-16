@@ -760,7 +760,12 @@ proto._removeFormat = function ( tag, attributes, range, partial ) {
     var doc = this._doc,
         fixer;
     if ( range.collapsed ) {
-        fixer = doc.createTextNode( '' );
+        if ( cantFocusEmptyTextNodes ) {
+            fixer = doc.createTextNode( ZWS );
+            this._didAddZWS();
+        } else {
+            fixer = doc.createTextNode( '' );
+        }
         insertNodeInRange( range, fixer );
     }
 
