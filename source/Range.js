@@ -30,7 +30,7 @@ var getNodeAfter = function ( node, offset ) {
 function getLastTextNode(node) {
     var child = node.lastChild;
     while( child ) {
-        if (child.nodeType === 3) {
+        if (child.nodeType === TEXT_NODE) {
             return child;
         }
         var text = getLastTextNode(child);
