@@ -32,6 +32,7 @@ var isWebKit = /WebKit\//.test( ua );
 var ctrlKey = isMac ? 'meta-' : 'ctrl-';
 
 var useTextFixer = isIElt11 || isPresto;
+var useNonEmptyFixer = isIElt11;
 var cantFocusEmptyTextNodes = isIElt11 || isWebKit;
 var losesSelectionOnBlur = isIElt11;
 
@@ -135,8 +136,10 @@ var inlineNodeNames  = /^(?:#text|A(?:BBR|CRONYM)?|B(?:R|D[IO])?|C(?:ITE|ODE)|D(
 
 var leafNodeNames = {
     BR: 1,
+    HR: 1,
     IMG: 1,
-    INPUT: 1
+    INPUT: 1,
+    WBR: 1
 };
 
 function every ( nodeList, fn ) {
@@ -295,7 +298,7 @@ function fixCursor ( node ) {
 
     if ( node.nodeName === 'BODY' ) {
         if ( !( child = node.firstChild ) || child.nodeName === 'BR' ) {
-            instance = getSquireInstance( doc );
+            instance = getSquireInstance ( doc );
             fixer = instance ?
                 instance.createDefaultBlock() :
                 createElement( doc, 'DIV' );
@@ -327,22 +330,31 @@ function fixCursor ( node ) {
         }
     } else {
         if ( useTextFixer ) {
-            while ( node.nodeType !== TEXT_NODE && !isLeaf( node ) ) {
-                child = node.firstChild;
-                if ( !child ) {
-                    fixer = doc.createTextNode( '' );
-                    break;
+            if ( useNonEmptyFixer ) {
+                if ( !node.querySelector( 'WBR' ) ) {
+                    fixer = createElement( doc, 'WBR' );
+                    while ( ( child = node.lastElementChild ) && !isInline( child ) ) {
+                        node = child;
+                    }
                 }
-                node = child;
-            }
-            if ( node.nodeType === TEXT_NODE ) {
-                // Opera will collapse the block element if it contains
-                // just spaces (but not if it contains no data at all).
-                if ( /^ +$/.test( node.data ) ) {
-                    node.data = '';
+            } else {
+                while ( node.nodeType !== TEXT_NODE && !isLeaf( node ) ) {
+                    child = node.firstChild;
+                    if ( !child ) {
+                        fixer = doc.createTextNode( '' );
+                        break;
+                    }
+                    node = child;
                 }
-            } else if ( isLeaf( node ) ) {
-                node.parentNode.insertBefore( doc.createTextNode( '' ), node );
+                if ( node.nodeType === TEXT_NODE ) {
+                    // Opera will collapse the block element if it contains
+                    // just spaces (but not if it contains no data at all).
+                    if ( /^ +$/.test( node.data ) ) {
+                        node.data = '';
+                    }
+                } else if ( isLeaf( node ) ) {
+                    node.parentNode.insertBefore( doc.createTextNode( '' ), node );
+                }
             }
         }
         else if ( !node.querySelector( 'BR' ) ) {
@@ -515,7 +527,7 @@ function mergeWithBlock ( block, next, range ) {
 
     // Remove extra <BR> fixer if present.
     last = block.lastChild;
-    if ( last && last.nodeName === 'BR' ) {
+    if ( last && last.nodeName === 'BR' || last.nodeName === 'WBR' ) {
         block.removeChild( last );
         offset -= 1;
     }
@@ -743,7 +755,7 @@ var deleteContentsOfRange = function ( range ) {
     // Ensure body has a block-level element in it.
     var body = range.endContainer.ownerDocument.body,
         child = body.firstChild;
-    if ( !child || child.nodeName === 'BR' ) {
+    if ( !child || child.nodeName === 'BR' || child.nodeName === 'WBR' ) {
         fixCursor( body );
         range.selectNodeContents( body.firstChild );
     }
@@ -780,6 +792,10 @@ var insertTreeFragmentIntoRange = function ( range, frag ) {
     // before and after split and insert block in between split, then merge
     // containers.
     else {
+        var block = getStartBlockOfRange( range );
+        removeZWS( block );
+        removeEmptyInlines( block );
+        fixCursor( block );
         var splitPoint = range.startContainer,
             nodeAfterSplit = split( splitPoint, range.startOffset,
                 getNearest( splitPoint.parentNode, 'BLOCKQUOTE' ) ||
@@ -794,13 +810,15 @@ var insertTreeFragmentIntoRange = function ( range, frag ) {
 
         while ( ( child = startContainer.lastChild ) &&
                 child.nodeType === ELEMENT_NODE &&
-                child.nodeName !== 'BR' ) {
+                child.nodeName !== 'BR'  &&
+                child.nodeName !== 'WBR' ) {
             startContainer = child;
             startOffset = startContainer.childNodes.length;
         }
         while ( ( child = endContainer.firstChild ) &&
                 child.nodeType === ELEMENT_NODE &&
-                child.nodeName !== 'BR' ) {
+                child.nodeName !== 'BR'  &&
+                child.nodeName !== 'WBR' ) {
             endContainer = child;
         }
         while ( ( child = frag.firstChild ) && isInline( child ) ) {
@@ -1458,9 +1476,7 @@ proto._updatePath = function ( range, force ) {
             this.fireEvent( 'pathChange', { path: newPath } );
         }
     }
-    if ( !range.collapsed ) {
-        this.fireEvent( 'select' );
-    }
+    this.fireEvent( 'select' );
 };
 
 proto._updatePathOnEvent = function () {
@@ -2519,7 +2535,7 @@ var cleanTree = function ( node, allowStyles ) {
 
 var notWSTextNode = function ( node ) {
     return node.nodeType === ELEMENT_NODE ?
-        node.nodeName === 'BR' :
+        node.nodeName === 'BR' || node.nodeName === 'WBR' :
         notWS.test( node.data );
 };
 var isLineBreak = function ( br ) {
@@ -2584,6 +2600,16 @@ var cleanupBRs = function ( root ) {
             }
             detach( br );
         }
+    }
+
+    // Cleanup the <WBR> tags -- if we need them, we can add them again
+    // later.
+    var wbrs = root.querySelectorAll( 'WBR' ),
+        wl = wbrs.length, wbr;
+
+    while ( wl-- ) {
+        wbr = wbrs[wl];
+        detach(wbr);
     }
 };
 
@@ -3191,7 +3217,7 @@ proto.getHTML = function ( withBookMark ) {
     if ( withBookMark && ( range = this.getSelection() ) ) {
         this._saveRangeToBookmark( range );
     }
-    if ( useTextFixer ) {
+    if ( useTextFixer && !useNonEmptyFixer ) {
         node = this._body;
         while ( node = getNextBlock( node ) ) {
             if ( !node.textContent && !node.querySelector( 'BR' ) ) {
@@ -3201,7 +3227,7 @@ proto.getHTML = function ( withBookMark ) {
             }
         }
     }
-    html = this._getHTML().replace( /\u200B/g, '' );
+    html = this._getHTML().replace( /\u200B/g, '' ).replace( '/<wbr([^>]*\/?[^>]*)>/g', '' );
     if ( useTextFixer ) {
         l = brs.length;
         while ( l-- ) {

@@ -402,9 +402,7 @@ proto._updatePath = function ( range, force ) {
             this.fireEvent( 'pathChange', { path: newPath } );
         }
     }
-    if ( !range.collapsed ) {
-        this.fireEvent( 'select' );
-    }
+    this.fireEvent( 'select' );
 };
 
 proto._updatePathOnEvent = function () {
@@ -1463,7 +1461,7 @@ var cleanTree = function ( node, allowStyles ) {
 
 var notWSTextNode = function ( node ) {
     return node.nodeType === ELEMENT_NODE ?
-        node.nodeName === 'BR' :
+        node.nodeName === 'BR' || node.nodeName === 'WBR' :
         notWS.test( node.data );
 };
 var isLineBreak = function ( br ) {
@@ -1528,6 +1526,16 @@ var cleanupBRs = function ( root ) {
             }
             detach( br );
         }
+    }
+
+    // Cleanup the <WBR> tags -- if we need them, we can add them again
+    // later.
+    var wbrs = root.querySelectorAll( 'WBR' ),
+        wl = wbrs.length, wbr;
+
+    while ( wl-- ) {
+        wbr = wbrs[wl];
+        detach(wbr);
     }
 };
 
@@ -2135,7 +2143,7 @@ proto.getHTML = function ( withBookMark ) {
     if ( withBookMark && ( range = this.getSelection() ) ) {
         this._saveRangeToBookmark( range );
     }
-    if ( useTextFixer ) {
+    if ( useTextFixer && !useNonEmptyFixer ) {
         node = this._body;
         while ( node = getNextBlock( node ) ) {
             if ( !node.textContent && !node.querySelector( 'BR' ) ) {
@@ -2145,7 +2153,7 @@ proto.getHTML = function ( withBookMark ) {
             }
         }
     }
-    html = this._getHTML().replace( /\u200B/g, '' );
+    html = this._getHTML().replace( /\u200B/g, '' ).replace( '/<wbr([^>]*\/?[^>]*)>/g', '' );
     if ( useTextFixer ) {
         l = brs.length;
         while ( l-- ) {
