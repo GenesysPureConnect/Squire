@@ -3315,9 +3315,6 @@ proto.setHTML = function ( html ) {
 };
 
 proto.insertElement = function ( el, range ) {
-    cleanTree( el, true );
-    cleanupBRs( el );
-
     if ( !range ) { range = this.getSelection(); }
 
     // Record undo checkpoint
