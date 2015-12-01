@@ -29,6 +29,7 @@ var isWebKit = /WebKit\//.test( ua );
 var ctrlKey = isMac ? 'meta-' : 'ctrl-';
 
 var useTextFixer = isIElt11 || isPresto;
+var useNonEmptyFixer = isIElt11;
 var cantFocusEmptyTextNodes = isIElt11 || isWebKit;
 var losesSelectionOnBlur = isIElt11;
 

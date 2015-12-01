@@ -293,7 +293,7 @@ var removeEmptyInlines = function removeEmptyInlines ( root ) {
 
 var notWSTextNode = function ( node ) {
     return node.nodeType === ELEMENT_NODE ?
-        node.nodeName === 'BR' :
+        node.nodeName === 'BR' || node.nodeName === 'WBR' :
         notWS.test( node.data );
 };
 var isLineBreak = function ( br ) {
@@ -342,5 +342,15 @@ var cleanupBRs = function ( root ) {
         } else if ( !isInline( parent ) ) {
             fixContainer( parent );
         }
+    }
+
+    // Cleanup the <WBR> tags -- if we need them, we can add them again
+    // later.
+    var wbrs = root.querySelectorAll( 'WBR' ),
+        wl = wbrs.length, wbr;
+
+    while ( wl-- ) {
+        wbr = wbrs[wl];
+        detach(wbr);
     }
 };

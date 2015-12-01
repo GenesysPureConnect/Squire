@@ -462,9 +462,7 @@ proto._updatePath = function ( range, force ) {
             this.fireEvent( 'pathChange', { path: newPath } );
         }
     }
-    if ( !range.collapsed ) {
-        this.fireEvent( 'select' );
-    }
+    this.fireEvent( 'select' );
 };
 
 proto._updatePathOnEvent = function () {
@@ -1318,7 +1316,7 @@ proto.getHTML = function ( withBookMark ) {
     if ( withBookMark && ( range = this.getSelection() ) ) {
         this._saveRangeToBookmark( range );
     }
-    if ( useTextFixer ) {
+    if ( useTextFixer && !useNonEmptyFixer ) {
         node = this._body;
         while ( node = getNextBlock( node ) ) {
             if ( !node.textContent && !node.querySelector( 'BR' ) ) {
@@ -1328,7 +1326,7 @@ proto.getHTML = function ( withBookMark ) {
             }
         }
     }
-    html = this._getHTML().replace( /\u200B/g, '' );
+    html = this._getHTML().replace( /\u200B/g, '' ).replace( '/<wbr([^>]*\/?[^>]*)>/g', '' );
     if ( useTextFixer ) {
         l = brs.length;
         while ( l-- ) {
@@ -1401,36 +1399,66 @@ proto.setHTML = function ( html ) {
 
 proto.insertElement = function ( el, range ) {
     if ( !range ) { range = this.getSelection(); }
-    range.collapse( true );
+
+    // Record undo checkpoint
+    this._recordUndoState( range );
+    this._getRangeAndRemoveBookmark( range );
+    // Delete any selected content
+    if ( !range.collapsed ) {
+        deleteContentsOfRange( range );
+        range.collapse( true );
+    }
+
     if ( isInline( el ) ) {
         insertNodeInRange( range, el );
         range.setStartAfter( el );
     } else {
         // Get containing block node.
         var body = this._body,
-            splitNode = getStartBlockOfRange( range ) || body,
+            splitNode = getStartBlockOfRange( range ),
             parent, nodeAfterSplit;
-        // While at end of container node, move up DOM tree.
-        while ( splitNode !== body && !splitNode.nextSibling ) {
-            splitNode = splitNode.parentNode;
-        }
-        // If in the middle of a container node, split up to body.
-        if ( splitNode !== body ) {
-            parent = splitNode.parentNode;
-            nodeAfterSplit = split( parent, splitNode.nextSibling, body );
-        }
-        if ( nodeAfterSplit ) {
-            body.insertBefore( el, nodeAfterSplit );
-        } else {
-            body.appendChild( el );
-            // Insert blank line below block.
-            nodeAfterSplit = this.createDefaultBlock();
-            body.appendChild( nodeAfterSplit );
-        }
-        range.setStart( nodeAfterSplit, 0 );
-        range.setEnd( nodeAfterSplit, 0 );
-        moveRangeBoundariesDownTree( range );
+
+            if( splitNode ) {
+                // if we have a splitNode, then we just insert the new element before the splitNode.
+                var currentText = splitNode.textContent;
+                // if this an empty block or a block with just ZWSs, then insert the new element before this line.
+                var isNewEmptyLine = ( splitNode.textContent === "" || (/^[\u200b]+$/).test( splitNode.textContent ));
+                // splitNode must not be the body, this to avoid inserting the new element before <body>
+                if ( isNewEmptyLine && splitNode !== body ) {
+                    splitNode.parentNode.insertBefore( el, splitNode );
+                } else {
+                    // If in a list, we'll split the LI instead.
+                    if ( parent = getNearest( splitNode, 'LI' ) ) {
+                        splitNode = parent;
+                    }
+
+                    if ( !splitNode.textContent ) {
+                        // Break list
+                        if ( getNearest( splitNode, 'UL' ) || getNearest( splitNode, 'OL' ) ) {
+                            return self.modifyBlocks( decreaseListLevel, range );
+                        }
+                        // Break blockquote
+                        else if ( getNearest( splitNode, 'BLOCKQUOTE' ) ) {
+                            return self.modifyBlocks( removeBlockQuote, range );
+                        }
+                    }
+                    // Otherwise, split at cursor point.
+                    nodeAfterSplit = splitBlock( this, splitNode,
+                        range.startContainer, range.startOffset );
+                    nodeAfterSplit.insertBefore( el, nodeAfterSplit.firstChild );
+                }
+            } else {
+                // we get into this situation if we have inline element all the way up to the body, something like <body><span>text</span></body>
+                var directChildOfBody = range.commonAncestorContainer;
+                while( directChildOfBody.parentElement !== body ) {
+                    directChildOfBody = directChildOfBody.parentNode;
+                }
+                body.insertBefore( el, directChildOfBody.nextSibling );
+            }
     }
+
+    range.selectNode( getLastTextNode( el ) || el );
+    range.collapse( false );
     this.focus();
     this.setSelection( range );
     this._updatePath( range );
