@@ -361,7 +361,12 @@ function fixCursor ( node ) {
             child = node.firstChild;
         }
         if ( !child ) {
-            fixer = doc.createTextNode( '' );
+            if ( cantFocusEmptyTextNodes ) {
+                fixer = doc.createTextNode( ZWS );
+                getSquireInstance( doc )._didAddZWS();
+            } else {
+                fixer = doc.createTextNode( '' );
+            }
         }
     } else {
         if ( useTextFixer ) {
@@ -2595,6 +2600,7 @@ var removeZWS = function ( root ) {
                     parent = node.parentNode;
                     parent.removeChild( node );
                     node = parent;
+                    walker.currentNode = parent;
                 } while ( isInline( node ) && !getLength( node ) );
                 break;
             } else {
@@ -2632,7 +2638,9 @@ proto._updatePath = function ( range, force ) {
             this.fireEvent( 'pathChange', { path: newPath } );
         }
     }
-    this.fireEvent( 'select' );
+    if ( !range.collapsed ) {
+        this.fireEvent( 'select' );
+    }
 };
 
 proto._updatePathOnEvent = function () {

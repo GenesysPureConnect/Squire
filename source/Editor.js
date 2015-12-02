@@ -463,7 +463,9 @@ proto._updatePath = function ( range, force ) {
             this.fireEvent( 'pathChange', { path: newPath } );
         }
     }
-    this.fireEvent( 'select' );
+    if ( !range.collapsed ) {
+        this.fireEvent( 'select' );
+    }
 };
 
 proto._updatePathOnEvent = function () {
