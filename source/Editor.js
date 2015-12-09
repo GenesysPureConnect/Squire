@@ -873,7 +873,7 @@ proto._removeFormat = function ( tag, attributes, range, partial ) {
     var doc = this._doc,
         fixer;
     if ( range.collapsed ) {
-        if ( cantFocusEmptyTextNodes && !this._hasZWS ) {
+        if ( cantFocusEmptyTextNodes ) {
             fixer = doc.createTextNode( ZWS );
             this._didAddZWS();
         } else {
