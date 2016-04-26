@@ -86,21 +86,19 @@ var onPaste = function ( event ) {
                 hasImage = true;
             }
         }
-        // Treat image paste as a drop of an image file.
+        // Trigger a willPaste event if these is an image type on the clipboardData.
         if ( hasImage ) {
-            this.fireEvent( 'dragover', {
-                dataTransfer: clipboardData,
-                /*jshint loopfunc: true */
+            var imagePasteEvent = {
+                clipboardData: event.clipboardData,
+                isImage: true,
                 preventDefault: function () {
-                    fireDrop = true;
-                }
-                /*jshint loopfunc: false */
-            });
-            if ( fireDrop ) {
-                this.fireEvent( 'drop', {
-                    dataTransfer: clipboardData
-                });
-            }
+                    this.defaultPrevented = true;
+                },
+                defaultPrevented: false
+            };
+
+            this.fireEvent( 'willPaste', imagePasteEvent);
+
         } else if ( plainItem ) {
             item.getAsString( function ( text ) {
                 self.insertPlainText( text, true );
