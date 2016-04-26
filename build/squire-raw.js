@@ -2136,21 +2136,19 @@ var onPaste = function ( event ) {
                 hasImage = true;
             }
         }
-        // Treat image paste as a drop of an image file.
+        // Trigger a willPaste event if these is an image type on the clipboardData.
         if ( hasImage ) {
-            this.fireEvent( 'dragover', {
-                dataTransfer: clipboardData,
-                /*jshint loopfunc: true */
+            var imagePasteEvent = {
+                clipboardData: event.clipboardData,
+                isImage: true,
                 preventDefault: function () {
-                    fireDrop = true;
-                }
-                /*jshint loopfunc: false */
-            });
-            if ( fireDrop ) {
-                this.fireEvent( 'drop', {
-                    dataTransfer: clipboardData
-                });
-            }
+                    this.defaultPrevented = true;
+                },
+                defaultPrevented: false
+            };
+
+            this.fireEvent( 'willPaste', imagePasteEvent);
+
         } else if ( plainItem ) {
             item.getAsString( function ( text ) {
                 self.insertPlainText( text, true );
@@ -2457,8 +2455,7 @@ proto.getRoot = function () {
 // document node, since these events are fired in a custom manner by the
 // editor code.
 var customEvents = {
-    pathChange: 1, select: 1, input: 1, undoStateChange: 1,
-    dragover: 1, drop: 1
+    pathChange: 1, select: 1, input: 1, undoStateChange: 1
 };
 
 proto.fireEvent = function ( type, event ) {
@@ -3869,6 +3866,7 @@ proto.insertHTML = function ( html, isPaste ) {
         var node = frag;
         var event = {
             fragment: frag,
+            isFragment: true,
             preventDefault: function () {
                 this.defaultPrevented = true;
             },
