@@ -35,6 +35,7 @@ var isWebKit = !isEdge && /WebKit\//.test( ua );
 var ctrlKey = isMac ? 'meta-' : 'ctrl-';
 
 var useTextFixer = isIElt11 || isPresto;
+var useNonEmptyFixer = isIElt11;
 var cantFocusEmptyTextNodes = isIElt11 || isWebKit;
 var losesSelectionOnBlur = isIElt11;
 
@@ -175,8 +176,10 @@ var inlineNodeNames  = /^(?:#text|A(?:BBR|CRONYM)?|B(?:R|D[IO])?|C(?:ITE|ODE)|D(
 
 var leafNodeNames = {
     BR: 1,
+    HR: 1,
     IMG: 1,
-    INPUT: 1
+    INPUT: 1,
+    WBR: 1
 };
 
 function every ( nodeList, fn ) {
@@ -382,22 +385,31 @@ function fixCursor ( node, root ) {
         }
     } else {
         if ( useTextFixer ) {
-            while ( node.nodeType !== TEXT_NODE && !isLeaf( node ) ) {
-                child = node.firstChild;
-                if ( !child ) {
-                    fixer = doc.createTextNode( '' );
-                    break;
+            if ( useNonEmptyFixer ) {
+                if ( !node.querySelector( 'WBR' ) ) {
+                    fixer = createElement( doc, 'WBR' );
+                    while ( ( child = node.lastElementChild ) && !isInline( child ) ) {
+                        node = child;
+                    }
                 }
-                node = child;
-            }
-            if ( node.nodeType === TEXT_NODE ) {
-                // Opera will collapse the block element if it contains
-                // just spaces (but not if it contains no data at all).
-                if ( /^ +$/.test( node.data ) ) {
-                    node.data = '';
+            } else {
+                while ( node.nodeType !== TEXT_NODE && !isLeaf( node ) ) {
+                    child = node.firstChild;
+                    if ( !child ) {
+                        fixer = doc.createTextNode( '' );
+                        break;
+                    }
+                    node = child;
                 }
-            } else if ( isLeaf( node ) ) {
-                node.parentNode.insertBefore( doc.createTextNode( '' ), node );
+                if ( node.nodeType === TEXT_NODE ) {
+                    // Opera will collapse the block element if it contains
+                    // just spaces (but not if it contains no data at all).
+                    if ( /^ +$/.test( node.data ) ) {
+                        node.data = '';
+                    }
+                } else if ( isLeaf( node ) ) {
+                    node.parentNode.insertBefore( doc.createTextNode( '' ), node );
+                }
             }
         }
         else if ( !node.querySelector( 'BR' ) ) {
@@ -588,7 +600,7 @@ function mergeWithBlock ( block, next, range ) {
 
     // Remove extra <BR> fixer if present.
     last = block.lastChild;
-    if ( last && last.nodeName === 'BR' ) {
+    if ( last && last.nodeName === 'BR' || last.nodeName === 'WBR' ) {
         block.removeChild( last );
         offset -= 1;
     }
@@ -825,7 +837,7 @@ var deleteContentsOfRange = function ( range, root ) {
 
     // Ensure root has a block-level element in it.
     var child = root.firstChild;
-    if ( !child || child.nodeName === 'BR' ) {
+    if ( !child || child.nodeName === 'BR' || child.nodeName === 'WBR'  ) {
         fixCursor( root, root );
         range.selectNodeContents( root.firstChild );
     } else {
@@ -862,7 +874,13 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         range.collapse( false );
     } else {
         // Otherwise...
-        // 1. Split up to blockquote (if a parent) or root
+
+        // 1. Split up to blockquote (if a parent) or body
+        var block = getStartBlockOfRange( range );
+        removeZWS( block );
+        removeEmptyInlines( block );
+        fixCursor( block );
+
         var splitPoint = range.startContainer,
             nodeAfterSplit = split(
                 splitPoint,
@@ -882,7 +900,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         // nodes at the beginning/end of the fragment
         while ( ( child = startContainer.lastChild ) &&
                 child.nodeType === ELEMENT_NODE ) {
-            if ( child.nodeName === 'BR' ) {
+            if ( child.nodeName === 'BR' || child.nodeName === 'WBR' ) {
                 startOffset -= 1;
                 break;
             }
@@ -891,7 +909,8 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         }
         while ( ( child = endContainer.firstChild ) &&
                 child.nodeType === ELEMENT_NODE &&
-                child.nodeName !== 'BR' ) {
+                child.nodeName !== 'BR'  &&
+                child.nodeName !== 'WBR' ) {
             endContainer = child;
         }
         startAnchor = startContainer.childNodes[ startOffset ] || null;
@@ -961,6 +980,22 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         moveRangeBoundariesDownTree( range );
     }
 };
+
+// Gets the last and deepest text node of a given node tree.
+// We use this text node as a focus target.
+function getLastTextNode(node) {
+    var child = node.lastChild;
+    while( child ) {
+        if ( child.nodeType === TEXT_NODE ) {
+            return child;
+        }
+        var text = getLastTextNode( child );
+        if( text ) {
+            return text;
+        }
+        child = child.previousSibling;
+    }
+}
 
 // ---
 
@@ -1953,7 +1988,7 @@ var removeEmptyInlines = function removeEmptyInlines ( node ) {
 
 var notWSTextNode = function ( node ) {
     return node.nodeType === ELEMENT_NODE ?
-        node.nodeName === 'BR' :
+        node.nodeName === 'BR' || node.nodeName === 'WBR' :
         notWS.test( node.data );
 };
 var isLineBreak = function ( br ) {
@@ -2002,6 +2037,16 @@ var cleanupBRs = function ( node, root ) {
         } else if ( !isInline( parent ) ) {
             fixContainer( parent, root );
         }
+    }
+
+    // Cleanup the <WBR> tags -- if we need them, we can add them again
+    // later.
+    var wbrs = root.querySelectorAll( 'WBR' ),
+        wl = wbrs.length, wbr;
+
+    while ( wl-- ) {
+        wbr = wbrs[wl];
+        detach(wbr);
     }
 };
 
@@ -2059,18 +2104,29 @@ var onCopy = function ( event ) {
 var onPaste = function ( event ) {
     var clipboardData = event.clipboardData,
         items = clipboardData && clipboardData.items,
-        fireDrop = false,
         hasImage = false,
         plainItem = null,
         self = this,
         l, item, type, types, data;
+
+        types = clipboardData && clipboardData.types;
+
+        // if pasted content has html data, then use code as there is no clipboard interface
+        var hasHtml = (types && (indexOf.call( types, 'text/html') >= 0 ));
 
     // Current HTML5 Clipboard interface
     // ---------------------------------
     // https://html.spec.whatwg.org/multipage/interaction.html
 
     // Edge only provides access to plain text as of 2016-03-11.
-    if ( !isEdge && items ) {
+
+    // Chrome 50: getAsString returns for 'text/html' returns extra charecter for content copied from MS Word
+    // and Outlook. So we skip using the item.getAsString if the clipboard content has html content.
+    // This has been fixed in Chrome/Canary 52.
+
+    // Chrome 52 : getAsString returns an empty string If we have an RTF content, so get the plain text instead
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=317807
+    if ( !isEdge && items && !hasHtml) {
         event.preventDefault();
         l = items.length;
         while ( l-- ) {
@@ -2091,21 +2147,19 @@ var onPaste = function ( event ) {
                 hasImage = true;
             }
         }
-        // Treat image paste as a drop of an image file.
+        // Trigger a willPaste event if these is an image type on the clipboardData.
         if ( hasImage ) {
-            this.fireEvent( 'dragover', {
-                dataTransfer: clipboardData,
-                /*jshint loopfunc: true */
+            var imagePasteEvent = {
+                clipboardData: event.clipboardData,
+                isImage: true,
                 preventDefault: function () {
-                    fireDrop = true;
-                }
-                /*jshint loopfunc: false */
-            });
-            if ( fireDrop ) {
-                this.fireEvent( 'drop', {
-                    dataTransfer: clipboardData
-                });
-            }
+                    this.defaultPrevented = true;
+                },
+                defaultPrevented: false
+            };
+
+            this.fireEvent( 'willPaste', imagePasteEvent);
+
         } else if ( plainItem ) {
             item.getAsString( function ( text ) {
                 self.insertPlainText( text, true );
@@ -2126,8 +2180,9 @@ var onPaste = function ( event ) {
     // an RTF version on the clipboard, but it will also convert to HTML if you
     // let the browser insert the content. I've filed
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1254028
-    types = clipboardData && clipboardData.types;
-    if ( !isEdge && types && (
+
+    // Chrome clipboardData.getData returns extra characters, so skip this if "items" is truthy
+    if (!items && !isEdge && types && (
             indexOf.call( types, 'text/html' ) > -1 || (
                 !isGecko &&
                 indexOf.call( types, 'text/plain' ) > -1 &&
@@ -2412,8 +2467,7 @@ proto.getRoot = function () {
 // document node, since these events are fired in a custom manner by the
 // editor code.
 var customEvents = {
-    pathChange: 1, select: 1, input: 1, undoStateChange: 1,
-    dragover: 1, drop: 1
+    pathChange: 1, select: 1, input: 1, undoStateChange: 1
 };
 
 proto.fireEvent = function ( type, event ) {
@@ -3618,7 +3672,7 @@ proto.getHTML = function ( withBookMark ) {
     if ( withBookMark && ( range = this.getSelection() ) ) {
         this._saveRangeToBookmark( range );
     }
-    if ( useTextFixer ) {
+    if ( useTextFixer && !useNonEmptyFixer ) {
         root = this._root;
         node = root;
         while ( node = getNextBlock( node, root ) ) {
@@ -3629,7 +3683,7 @@ proto.getHTML = function ( withBookMark ) {
             }
         }
     }
-    html = this._getHTML().replace( /\u200B/g, '' );
+    html = this._getHTML().replace( /\u200B/g, '' ).replace( '/<wbr([^>]*\/?[^>]*)>/g', '' );
     if ( useTextFixer ) {
         l = brs.length;
         while ( l-- ) {
@@ -3697,36 +3751,67 @@ proto.setHTML = function ( html ) {
 
 proto.insertElement = function ( el, range ) {
     if ( !range ) { range = this.getSelection(); }
-    range.collapse( true );
+
+    // Record undo checkpoint
+    this._recordUndoState( range );
+    this._getRangeAndRemoveBookmark( range );
+    // Delete any selected content
+    if ( !range.collapsed ) {
+        deleteContentsOfRange( range );
+        range.collapse( true );
+    }
+
     if ( isInline( el ) ) {
         insertNodeInRange( range, el );
         range.setStartAfter( el );
     } else {
         // Get containing block node.
         var root = this._root;
-        var splitNode = getStartBlockOfRange( range, root ) || root;
-        var parent, nodeAfterSplit;
-        // While at end of container node, move up DOM tree.
-        while ( splitNode !== root && !splitNode.nextSibling ) {
-            splitNode = splitNode.parentNode;
-        }
-        // If in the middle of a container node, split up to root.
-        if ( splitNode !== root ) {
-            parent = splitNode.parentNode;
-            nodeAfterSplit = split( parent, splitNode.nextSibling, root, root );
-        }
-        if ( nodeAfterSplit ) {
-            root.insertBefore( el, nodeAfterSplit );
+        var body = root,
+            splitNode = getStartBlockOfRange( range, root ),
+            parent, nodeAfterSplit;
+
+        if( splitNode ) {
+            // if we have a splitNode, then we just insert the new element before the splitNode.
+            var currentText = splitNode.textContent;
+            // if this an empty block or a block with just ZWSs, then insert the new element before this line.
+            var isNewEmptyLine = ( splitNode.textContent === "" || (/^[\u200b]+$/).test( splitNode.textContent ));
+            // splitNode must not be the body, this to avoid inserting the new element before <body>
+            if ( isNewEmptyLine && splitNode !== body ) {
+                splitNode.parentNode.insertBefore( el, splitNode );
+            } else {
+                // If in a list, we'll split the LI instead.
+                if ( parent = getNearest( splitNode, 'LI' ) ) {
+                    splitNode = parent;
+                }
+
+                if ( !splitNode.textContent ) {
+                    // Break list
+                    if ( getNearest( splitNode, 'UL' ) || getNearest( splitNode, 'OL' ) ) {
+                        return self.modifyBlocks( decreaseListLevel, range );
+                    }
+                    // Break blockquote
+                    else if ( getNearest( splitNode, 'BLOCKQUOTE' ) ) {
+                        return self.modifyBlocks( removeBlockQuote, range );
+                    }
+                }
+                // Otherwise, split at cursor point.
+                nodeAfterSplit = splitBlock( this, splitNode,
+                    range.startContainer, range.startOffset );
+                nodeAfterSplit.insertBefore( el, nodeAfterSplit.firstChild );
+            }
         } else {
-            root.appendChild( el );
-            // Insert blank line below block.
-            nodeAfterSplit = this.createDefaultBlock();
-            root.appendChild( nodeAfterSplit );
+            // we get into this situation if we have inline element all the way up to the body, something like <body><span>text</span></body>
+            var directChildOfBody = range.commonAncestorContainer;
+            while( directChildOfBody.parentElement !== body ) {
+                directChildOfBody = directChildOfBody.parentNode;
+            }
+            body.insertBefore( el, directChildOfBody.nextSibling );
         }
-        range.setStart( nodeAfterSplit, 0 );
-        range.setEnd( nodeAfterSplit, 0 );
-        moveRangeBoundariesDownTree( range );
     }
+
+    range.selectNode( getLastTextNode( el ) || el );
+    range.collapse( false );
     this.focus();
     this.setSelection( range );
     this._updatePath( range );
@@ -3793,6 +3878,7 @@ proto.insertHTML = function ( html, isPaste ) {
         var node = frag;
         var event = {
             fragment: frag,
+            isFragment: true,
             preventDefault: function () {
                 this.defaultPrevented = true;
             },

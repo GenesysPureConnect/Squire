@@ -168,7 +168,7 @@ var deleteContentsOfRange = function ( range, root ) {
 
     // Ensure root has a block-level element in it.
     var child = root.firstChild;
-    if ( !child || child.nodeName === 'BR' ) {
+    if ( !child || child.nodeName === 'BR' || child.nodeName === 'WBR'  ) {
         fixCursor( root, root );
         range.selectNodeContents( root.firstChild );
     } else {
@@ -205,7 +205,13 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         range.collapse( false );
     } else {
         // Otherwise...
-        // 1. Split up to blockquote (if a parent) or root
+
+        // 1. Split up to blockquote (if a parent) or body
+        var block = getStartBlockOfRange( range );
+        removeZWS( block );
+        removeEmptyInlines( block );
+        fixCursor( block );
+
         var splitPoint = range.startContainer,
             nodeAfterSplit = split(
                 splitPoint,
@@ -225,7 +231,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         // nodes at the beginning/end of the fragment
         while ( ( child = startContainer.lastChild ) &&
                 child.nodeType === ELEMENT_NODE ) {
-            if ( child.nodeName === 'BR' ) {
+            if ( child.nodeName === 'BR' || child.nodeName === 'WBR' ) {
                 startOffset -= 1;
                 break;
             }
@@ -234,7 +240,8 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         }
         while ( ( child = endContainer.firstChild ) &&
                 child.nodeType === ELEMENT_NODE &&
-                child.nodeName !== 'BR' ) {
+                child.nodeName !== 'BR'  &&
+                child.nodeName !== 'WBR' ) {
             endContainer = child;
         }
         startAnchor = startContainer.childNodes[ startOffset ] || null;
@@ -304,6 +311,22 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         moveRangeBoundariesDownTree( range );
     }
 };
+
+// Gets the last and deepest text node of a given node tree.
+// We use this text node as a focus target.
+function getLastTextNode(node) {
+    var child = node.lastChild;
+    while( child ) {
+        if ( child.nodeType === TEXT_NODE ) {
+            return child;
+        }
+        var text = getLastTextNode( child );
+        if( text ) {
+            return text;
+        }
+        child = child.previousSibling;
+    }
+}
 
 // ---
 
