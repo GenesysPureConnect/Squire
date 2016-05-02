@@ -2104,18 +2104,30 @@ var onCopy = function ( event ) {
 var onPaste = function ( event ) {
     var clipboardData = event.clipboardData,
         items = clipboardData && clipboardData.items,
-        fireDrop = false,
         hasImage = false,
         plainItem = null,
         self = this,
         l, item, type, types, data;
+
+        types = clipboardData && clipboardData.types;
+
+        // if pasted content has html data, then use code as there is no clipboard interface
+        var hasHtml = (types && (indexOf.call( types, 'text/html') >= 0 ));
 
     // Current HTML5 Clipboard interface
     // ---------------------------------
     // https://html.spec.whatwg.org/multipage/interaction.html
 
     // Edge only provides access to plain text as of 2016-03-11.
-    if ( !isEdge && items ) {
+
+    // Chrome 50: getAsString returns for 'text/html' returns extra charecter for content copied from MS Word
+    // and Outlook. So we skip using the item.getAsString if the clipboard content has html content.
+    // This has been fixed in Chrome/Canary 52.
+
+    // TODO: remove "hasHtml" from the if statement when Chrome versions under 52 are not supported
+    // Chrome 52 : getAsString returns an empty string If we have an RTF content, so get the plain text instead
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=317807
+    if ( !isEdge && items && !hasHtml) {
         event.preventDefault();
         l = items.length;
         while ( l-- ) {
@@ -2169,8 +2181,10 @@ var onPaste = function ( event ) {
     // an RTF version on the clipboard, but it will also convert to HTML if you
     // let the browser insert the content. I've filed
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1254028
-    types = clipboardData && clipboardData.types;
-    if ( !isEdge && types && (
+
+    // TODO: remove "items" from the if statement when Chrome versions under 52 are not supported
+    // Chrome clipboardData.getData returns extra characters, so skip this if "items" is truthy. "items"
+    if (!items && !isEdge && types && (
             indexOf.call( types, 'text/html' ) > -1 || (
                 !isGecko &&
                 indexOf.call( types, 'text/plain' ) > -1 &&
@@ -2254,7 +2268,6 @@ var onPaste = function ( event ) {
         }
     }, 0 );
 };
-
 var instances = [];
 
 function getSquireInstance ( doc ) {
