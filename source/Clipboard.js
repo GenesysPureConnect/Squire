@@ -80,7 +80,7 @@ var onPaste = function ( event ) {
     // TODO: remove "hasHtml" from the if statement when Chrome versions under 52 are not supported
     // Chrome 52 : getAsString returns an empty string If we have an RTF content, so get the plain text instead
     // https://bugs.chromium.org/p/chromium/issues/detail?id=317807
-    if ( items && ( hasFiles || (!isEdge && !hasHtml)) {
+    if ( items && ( hasFiles || (!isEdge && !hasHtml))) {
         event.preventDefault();
         l = items.length;
         while ( l-- ) {
