@@ -2942,7 +2942,7 @@ proto._docWasChanged = function () {
     if(this._ignoreAllChanges) {
         return;
     }
-    
+
     if ( canObserveMutations && this._ignoreChange ) {
         this._ignoreChange = false;
         return;
@@ -3843,6 +3843,11 @@ proto.insertElement = function ( el, range ) {
     this.focus();
     this.setSelection( range );
     this._updatePath( range );
+
+    if ( !canObserveMutations ) {
+        this._docWasChanged();
+    }
+    
     return this;
 };
 
