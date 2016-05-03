@@ -4,8 +4,10 @@ var inlineNodeNames  = /^(?:#text|A(?:BBR|CRONYM)?|B(?:R|D[IO])?|C(?:ITE|ODE)|D(
 
 var leafNodeNames = {
     BR: 1,
+    HR: 1,
     IMG: 1,
-    INPUT: 1
+    INPUT: 1,
+    WBR: 1
 };
 
 function every ( nodeList, fn ) {
@@ -202,26 +204,40 @@ function fixCursor ( node, root ) {
             child = node.firstChild;
         }
         if ( !child ) {
-            fixer = doc.createTextNode( '' );
+            if ( cantFocusEmptyTextNodes ) {
+                fixer = doc.createTextNode( ZWS );
+                getSquireInstance( doc )._didAddZWS();
+            } else {
+                fixer = doc.createTextNode( '' );
+            }
         }
     } else {
         if ( useTextFixer ) {
-            while ( node.nodeType !== TEXT_NODE && !isLeaf( node ) ) {
-                child = node.firstChild;
-                if ( !child ) {
-                    fixer = doc.createTextNode( '' );
-                    break;
+            if ( useNonEmptyFixer ) {
+                if ( !node.querySelector( 'WBR' ) ) {
+                    fixer = createElement( doc, 'WBR' );
+                    while ( ( child = node.lastElementChild ) && !isInline( child ) ) {
+                        node = child;
+                    }
                 }
-                node = child;
-            }
-            if ( node.nodeType === TEXT_NODE ) {
-                // Opera will collapse the block element if it contains
-                // just spaces (but not if it contains no data at all).
-                if ( /^ +$/.test( node.data ) ) {
-                    node.data = '';
+            } else {
+                while ( node.nodeType !== TEXT_NODE && !isLeaf( node ) ) {
+                    child = node.firstChild;
+                    if ( !child ) {
+                        fixer = doc.createTextNode( '' );
+                        break;
+                    }
+                    node = child;
                 }
-            } else if ( isLeaf( node ) ) {
-                node.parentNode.insertBefore( doc.createTextNode( '' ), node );
+                if ( node.nodeType === TEXT_NODE ) {
+                    // Opera will collapse the block element if it contains
+                    // just spaces (but not if it contains no data at all).
+                    if ( /^ +$/.test( node.data ) ) {
+                        node.data = '';
+                    }
+                } else if ( isLeaf( node ) ) {
+                    node.parentNode.insertBefore( doc.createTextNode( '' ), node );
+                }
             }
         }
         else if ( !node.querySelector( 'BR' ) ) {
@@ -412,7 +428,7 @@ function mergeWithBlock ( block, next, range ) {
 
     // Remove extra <BR> fixer if present.
     last = block.lastChild;
-    if ( last && last.nodeName === 'BR' ) {
+    if ( last && last.nodeName === 'BR' || last.nodeName === 'WBR' ) {
         block.removeChild( last );
         offset -= 1;
     }

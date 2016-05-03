@@ -64,6 +64,7 @@ function Squire ( root, config ) {
     this._undoStackLength = 0;
     this._isInUndoState = false;
     this._ignoreChange = false;
+    this._ignoreAllChanges = false;
 
     if ( canObserveMutations ) {
         mutation = new MutationObserver( this._docWasChanged.bind( this ) );
@@ -194,14 +195,32 @@ proto.getRoot = function () {
     return this._root;
 };
 
+proto.modifyDocument = function(modificationCallback) {
+    this._ignoreAllChanges = true;
+    if(this._mutation) {
+            this._mutation.disconnect();
+    }
+
+    modificationCallback();
+
+    this._ignoreAllChanges = false;
+    if(this._mutation) {
+        this._mutation.observe( this._root, {
+            childList: true,
+            attributes: true,
+            characterData: true,
+            subtree: true
+        });
+    }
+};
+
 // --- Events ---
 
 // Subscribing to these events won't automatically add a listener to the
 // document node, since these events are fired in a custom manner by the
 // editor code.
 var customEvents = {
-    pathChange: 1, select: 1, input: 1, undoStateChange: 1,
-    dragover: 1, drop: 1
+    pathChange: 1, select: 1, input: 1, undoStateChange: 1
 };
 
 proto.fireEvent = function ( type, event ) {
@@ -649,6 +668,10 @@ proto._keyUpDetectChange = function ( event ) {
 };
 
 proto._docWasChanged = function () {
+    if(this._ignoreAllChanges) {
+        return;
+    }
+    
     if ( canObserveMutations && this._ignoreChange ) {
         this._ignoreChange = false;
         return;
@@ -957,7 +980,7 @@ proto._removeFormat = function ( tag, attributes, range, partial ) {
     var doc = this._doc,
         fixer;
     if ( range.collapsed ) {
-        if ( cantFocusEmptyTextNodes && !this._hasZWS ) {
+        if ( cantFocusEmptyTextNodes ) {
             fixer = doc.createTextNode( ZWS );
             this._didAddZWS();
         } else {
@@ -1406,7 +1429,7 @@ proto.getHTML = function ( withBookMark ) {
     if ( withBookMark && ( range = this.getSelection() ) ) {
         this._saveRangeToBookmark( range );
     }
-    if ( useTextFixer ) {
+    if ( useTextFixer && !useNonEmptyFixer ) {
         root = this._root;
         node = root;
         while ( node = getNextBlock( node, root ) ) {
@@ -1417,7 +1440,7 @@ proto.getHTML = function ( withBookMark ) {
             }
         }
     }
-    html = this._getHTML().replace( /\u200B/g, '' );
+    html = this._getHTML().replace( /\u200B/g, '' ).replace( '/<wbr([^>]*\/?[^>]*)>/g', '' );
     if ( useTextFixer ) {
         l = brs.length;
         while ( l-- ) {
@@ -1485,36 +1508,67 @@ proto.setHTML = function ( html ) {
 
 proto.insertElement = function ( el, range ) {
     if ( !range ) { range = this.getSelection(); }
-    range.collapse( true );
+
+    // Record undo checkpoint
+    this._recordUndoState( range );
+    this._getRangeAndRemoveBookmark( range );
+    // Delete any selected content
+    if ( !range.collapsed ) {
+        deleteContentsOfRange( range );
+        range.collapse( true );
+    }
+
     if ( isInline( el ) ) {
         insertNodeInRange( range, el );
         range.setStartAfter( el );
     } else {
         // Get containing block node.
         var root = this._root;
-        var splitNode = getStartBlockOfRange( range, root ) || root;
-        var parent, nodeAfterSplit;
-        // While at end of container node, move up DOM tree.
-        while ( splitNode !== root && !splitNode.nextSibling ) {
-            splitNode = splitNode.parentNode;
-        }
-        // If in the middle of a container node, split up to root.
-        if ( splitNode !== root ) {
-            parent = splitNode.parentNode;
-            nodeAfterSplit = split( parent, splitNode.nextSibling, root, root );
-        }
-        if ( nodeAfterSplit ) {
-            root.insertBefore( el, nodeAfterSplit );
+        var body = root,
+            splitNode = getStartBlockOfRange( range, root ),
+            parent, nodeAfterSplit;
+
+        if( splitNode ) {
+            // if we have a splitNode, then we just insert the new element before the splitNode.
+            var currentText = splitNode.textContent;
+            // if this an empty block or a block with just ZWSs, then insert the new element before this line.
+            var isNewEmptyLine = ( splitNode.textContent === "" || (/^[\u200b]+$/).test( splitNode.textContent ));
+            // splitNode must not be the body, this to avoid inserting the new element before <body>
+            if ( isNewEmptyLine && splitNode !== body ) {
+                splitNode.parentNode.insertBefore( el, splitNode );
+            } else {
+                // If in a list, we'll split the LI instead.
+                if ( parent = getNearest( splitNode, 'LI' ) ) {
+                    splitNode = parent;
+                }
+
+                if ( !splitNode.textContent ) {
+                    // Break list
+                    if ( getNearest( splitNode, 'UL' ) || getNearest( splitNode, 'OL' ) ) {
+                        return self.modifyBlocks( decreaseListLevel, range );
+                    }
+                    // Break blockquote
+                    else if ( getNearest( splitNode, 'BLOCKQUOTE' ) ) {
+                        return self.modifyBlocks( removeBlockQuote, range );
+                    }
+                }
+                // Otherwise, split at cursor point.
+                nodeAfterSplit = splitBlock( this, splitNode,
+                    range.startContainer, range.startOffset );
+                nodeAfterSplit.insertBefore( el, nodeAfterSplit.firstChild );
+            }
         } else {
-            root.appendChild( el );
-            // Insert blank line below block.
-            nodeAfterSplit = this.createDefaultBlock();
-            root.appendChild( nodeAfterSplit );
+            // we get into this situation if we have inline element all the way up to the body, something like <body><span>text</span></body>
+            var directChildOfBody = range.commonAncestorContainer;
+            while( directChildOfBody.parentElement !== body ) {
+                directChildOfBody = directChildOfBody.parentNode;
+            }
+            body.insertBefore( el, directChildOfBody.nextSibling );
         }
-        range.setStart( nodeAfterSplit, 0 );
-        range.setEnd( nodeAfterSplit, 0 );
-        moveRangeBoundariesDownTree( range );
     }
+
+    range.selectNode( getLastTextNode( el ) || el );
+    range.collapse( false );
     this.focus();
     this.setSelection( range );
     this._updatePath( range );
@@ -1581,6 +1635,7 @@ proto.insertHTML = function ( html, isPaste ) {
         var node = frag;
         var event = {
             fragment: frag,
+            isFragment: true,
             preventDefault: function () {
                 this.defaultPrevented = true;
             },
