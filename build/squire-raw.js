@@ -2368,6 +2368,8 @@ function Squire ( root, config ) {
     this.addEventListener( 'copy', onCopy );
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
 
+    this.addEventListener( 'drop', onDrop );
+
     // Opera does not fire keydown repeatedly.
     this.addEventListener( isPresto ? 'keypress' : 'keydown', onKey );
 
@@ -2586,6 +2588,19 @@ proto.removeEventListener = function ( type, fn ) {
     }
     return this;
 };
+
+var onDrop = function( event ){
+    var dataTransfer = event.dataTransfer,
+        items = dataTransfer && dataTransfer.items,
+        types = dataTransfer && dataTransfer.types;
+
+    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
+
+    if( !hasFiles ) {
+        this._isInUndoState = false;
+        this._recordUndoState();
+    }
+}
 
 // --- Selection and Path ---
 
@@ -3847,7 +3862,6 @@ proto.insertElement = function ( el, range ) {
     if ( !canObserveMutations ) {
         this._docWasChanged();
     }
-    
     return this;
 };
 
