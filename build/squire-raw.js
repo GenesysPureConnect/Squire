@@ -2591,7 +2591,6 @@ proto.removeEventListener = function ( type, fn ) {
 
 var onDrop = function( event ){
     var dataTransfer = event.dataTransfer,
-        items = dataTransfer && dataTransfer.items,
         types = dataTransfer && dataTransfer.types;
 
     var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
@@ -2600,7 +2599,7 @@ var onDrop = function( event ){
         this._isInUndoState = false;
         this._recordUndoState();
     }
-}
+};
 
 // --- Selection and Path ---
 
