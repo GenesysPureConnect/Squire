@@ -3696,7 +3696,6 @@ proto._setHTML = function ( html ) {
     do {
         fixCursor( node, root );
     } while ( node = getNextBlock( node, root ) );
-    this._ignoreChange = true;
 };
 
 proto.getHTML = function ( withBookMark ) {
