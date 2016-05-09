@@ -635,21 +635,9 @@ proto._getRangeAndRemoveBookmark = function ( range ) {
         range.setEnd( _range.endContainer, _range.endOffset );
         collapsed = range.collapsed;
 
-        // If we didn't split a text node, we should move into any adjacent
-        // text node to current selection point
+        moveRangeBoundariesDownTree( range );
         if ( collapsed ) {
-            startContainer = range.startContainer;
-            if ( startContainer.nodeType === TEXT_NODE ) {
-                endContainer = startContainer.childNodes[ range.startOffset ];
-                if ( !endContainer || endContainer.nodeType !== TEXT_NODE ) {
-                    endContainer =
-                        startContainer.childNodes[ range.startOffset - 1 ];
-                }
-                if ( endContainer && endContainer.nodeType === TEXT_NODE ) {
-                    range.setStart( endContainer, 0 );
-                    range.collapse( true );
-                }
-            }
+            range.collapse( true );
         }
     }
     return range || null;
