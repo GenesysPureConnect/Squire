@@ -304,6 +304,19 @@ var isLineBreak = function ( br ) {
     return !!walker.nextNode();
 };
 
+
+// Cleanup the <WBR> tags -- if we need them, we can add them again
+// later.
+var cleanupWBRs = function ( node ) {
+    var wbrs = node.querySelectorAll( 'WBR' ),
+        wl = wbrs.length, wbr;
+
+    while ( wl-- ) {
+        wbr = wbrs[wl];
+        detach(wbr);
+    }
+};
+
 // <br> elements are treated specially, and differently depending on the
 // browser, when in rich text editor mode. When adding HTML from external
 // sources, we must remove them, replacing the ones that actually affect
@@ -340,13 +353,5 @@ var cleanupBRs = function ( node, root ) {
         }
     }
 
-    // Cleanup the <WBR> tags -- if we need them, we can add them again
-    // later.
-    var wbrs = root.querySelectorAll( 'WBR' ),
-        wl = wbrs.length, wbr;
-
-    while ( wl-- ) {
-        wbr = wbrs[wl];
-        detach(wbr);
-    }
+    cleanupWBRs( node );
 };
