@@ -2618,10 +2618,8 @@ var onDrop = function( event ) {
     if( !hasFiles ) {
         var range = this.getSelection();
         this._recordUndoState( range );
-        addLinks( range.startContainer, this._root, this );
         this._getRangeAndRemoveBookmark( range );
         this.setSelection( range );
-        this.focus();
     }
 };
 
