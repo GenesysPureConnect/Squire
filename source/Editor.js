@@ -97,6 +97,8 @@ function Squire ( root, config ) {
     this.addEventListener( 'copy', onCopy );
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
 
+    this.addEventListener( 'drop', onDrop );
+
     // Opera does not fire keydown repeatedly.
     this.addEventListener( isPresto ? 'keypress' : 'keydown', onKey );
 
@@ -317,6 +319,20 @@ proto.removeEventListener = function ( type, fn ) {
         }
     }
     return this;
+};
+
+var onDrop = function( event ) {
+    var dataTransfer = event.dataTransfer,
+        types = dataTransfer && dataTransfer.types;
+
+    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
+
+    if( !hasFiles ) {
+        var range = this.getSelection();
+        this._recordUndoState( range );
+        this._getRangeAndRemoveBookmark( range );
+        this.setSelection( range );
+    }
 };
 
 // --- Selection and Path ---
@@ -1536,11 +1552,11 @@ proto.insertElement = function ( el, range ) {
                 if ( !splitNode.textContent ) {
                     // Break list
                     if ( getNearest( splitNode, 'UL' ) || getNearest( splitNode, 'OL' ) ) {
-                        return self.modifyBlocks( decreaseListLevel, range );
+                        return this.modifyBlocks( decreaseListLevel, range );
                     }
                     // Break blockquote
                     else if ( getNearest( splitNode, 'BLOCKQUOTE' ) ) {
-                        return self.modifyBlocks( removeBlockQuote, range );
+                        return this.modifyBlocks( removeBlockQuote, range );
                     }
                 }
                 // Otherwise, split at cursor point.
