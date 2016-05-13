@@ -229,11 +229,6 @@ var onDrop = function( event ) {
     var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
 
     if( !hasFiles ) {
-        //var range = this.getSelection();
-        //this._recordUndoState( range );
-        //this._getRangeAndRemoveBookmark( range );
-        //this.setSelection( range );
-
         var self = this;
 
         var insertHtmlItem = function ( html ) {
@@ -253,17 +248,19 @@ var onDrop = function( event ) {
             }
         }
 
+        // Some browsers will not put the html on the drop event. So we will wait
+        // until after the drop to clean it.
         var range = this.getSelection();
         this.saveUndoState();
         this.setSelection( range );
         setTimeout( function () {
             try {
-                //cleanTree( self._root );
+                cleanTree( self._root );
+                addLinks( range.startContainer, self._root, self );
 
             } catch ( error ) {
                 self.didError( error );
             }
         }, 0 );
     }
-
 };
