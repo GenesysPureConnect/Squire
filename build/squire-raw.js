@@ -2292,6 +2292,50 @@ var onPaste = function ( event ) {
         }
     }, 0 );
 };
+
+var onDrop = function( event ) {
+    var dataTransfer = event.dataTransfer,
+        types = dataTransfer && dataTransfer.types;
+
+    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
+
+    if( !hasFiles ) {
+        var self = this;
+
+        var insertHtmlItem = function ( html ) {
+            self.insertHTML( html, true );
+        };
+
+        if( dataTransfer.items ) {
+            for( var i = 0; i < dataTransfer.items.length; i++ ) {
+                var item = dataTransfer.items[i];
+                if( item.type === 'text/html') {
+                    event.preventDefault();
+
+                    item.getAsString( insertHtmlItem );
+
+                    return;
+                }
+            }
+        }
+
+        // Some browsers will not put the html on the drop event. So we will wait
+        // until after the drop to clean it.
+        var range = this.getSelection();
+        this.saveUndoState();
+        this.setSelection( range );
+        setTimeout( function () {
+            try {
+                cleanTree( self._root );
+                addLinks( range.startContainer, self._root, self );
+
+            } catch ( error ) {
+                self.didError( error );
+            }
+        }, 0 );
+    }
+};
+
 var instances = [];
 
 function getSquireInstance ( doc ) {
@@ -2613,19 +2657,6 @@ proto.removeEventListener = function ( type, fn ) {
     return this;
 };
 
-var onDrop = function( event ) {
-    var dataTransfer = event.dataTransfer,
-        types = dataTransfer && dataTransfer.types;
-
-    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
-
-    if( !hasFiles ) {
-        var range = this.getSelection();
-        this._recordUndoState( range );
-        this._getRangeAndRemoveBookmark( range );
-        this.setSelection( range );
-    }
-};
 
 // --- Selection and Path ---
 
