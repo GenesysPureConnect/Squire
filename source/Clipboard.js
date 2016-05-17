@@ -222,14 +222,32 @@ var onPaste = function ( event ) {
     }, 0 );
 };
 
-var onDrop = function( event ) {
-    var dataTransfer = event.dataTransfer,
-        types = dataTransfer && dataTransfer.types;
+var onDrag = function() {
+    this._isDragging = true;
+};
 
-    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
+var onDragend = function() {
+    this._isDragging = false;
+};
+
+var onDrop = function( event ) {
+    var dataTransfer = event.dataTransfer;
+
+    var hasFiles = ( dataTransfer && dataTransfer.files && dataTransfer.files.length );
 
     if( !hasFiles ) {
         var self = this;
+
+        // If we are dragging and dropping within the editor, we will save the
+        // undo state and allow default browser behavior.
+        if( this._isDragging ) {
+            this._isDragging = false;
+            var selectedRange = this.getSelection();
+            this.saveUndoState();
+            this.setSelection( selectedRange );
+
+            return;
+        }
 
         var insertHtmlItem = function ( html ) {
             self.insertHTML( html, true );
