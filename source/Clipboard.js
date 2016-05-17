@@ -222,9 +222,11 @@ var onPaste = function ( event ) {
     }, 0 );
 };
 
+var onDrag = function() {
     this._isDragging = true;
 };
 
+var onDragend = function() {
     this._isDragging = false;
 };
 
