@@ -97,6 +97,10 @@ function Squire ( root, config ) {
     this.addEventListener( 'copy', onCopy );
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
 
+    // Drag drop listeners
+    this._isDragging = false;
+    this.addEventListener( 'drag', onDrag );
+    this.addEventListener( 'dragend', onDragend );
     this.addEventListener( 'drop', onDrop );
 
     // Opera does not fire keydown repeatedly.
@@ -321,19 +325,6 @@ proto.removeEventListener = function ( type, fn ) {
     return this;
 };
 
-var onDrop = function( event ) {
-    var dataTransfer = event.dataTransfer,
-        types = dataTransfer && dataTransfer.types;
-
-    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
-
-    if( !hasFiles ) {
-        var range = this.getSelection();
-        this._recordUndoState( range );
-        this._getRangeAndRemoveBookmark( range );
-        this.setSelection( range );
-    }
-};
 
 // --- Selection and Path ---
 

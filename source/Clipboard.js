@@ -221,3 +221,64 @@ var onPaste = function ( event ) {
         }
     }, 0 );
 };
+
+var onDrag = function() {
+    this._isDragging = true;
+};
+
+var onDragend = function() {
+    this._isDragging = false;
+};
+
+var onDrop = function( event ) {
+    var dataTransfer = event.dataTransfer;
+
+    var hasFiles = ( dataTransfer && dataTransfer.files && dataTransfer.files.length );
+
+    if( !hasFiles ) {
+        var self = this;
+
+        // If we are dragging and dropping within the editor, we will save the
+        // undo state and allow default browser behavior.
+        if( this._isDragging ) {
+            this._isDragging = false;
+            var selectedRange = this.getSelection();
+            this.saveUndoState();
+            this.setSelection( selectedRange );
+
+            return;
+        }
+
+        var insertHtmlItem = function ( html ) {
+            self.insertHTML( html, true );
+        };
+
+        if( dataTransfer.items ) {
+            for( var i = 0; i < dataTransfer.items.length; i++ ) {
+                var item = dataTransfer.items[i];
+                if( item.type === 'text/html') {
+                    event.preventDefault();
+
+                    item.getAsString( insertHtmlItem );
+
+                    return;
+                }
+            }
+        }
+
+        // Some browsers will not put the html on the drop event. So we will wait
+        // until after the drop to clean it.
+        var range = this.getSelection();
+        this.saveUndoState();
+        this.setSelection( range );
+        setTimeout( function () {
+            try {
+                cleanTree( self._root );
+                addLinks( range.startContainer, self._root, self );
+
+            } catch ( error ) {
+                self.didError( error );
+            }
+        }, 0 );
+    }
+};

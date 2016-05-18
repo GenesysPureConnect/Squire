@@ -1165,6 +1165,10 @@ var rangeDoesStartAtBlockBoundary = function ( range, root ) {
         contentWalker.currentNode = startContainer;
     } else {
         contentWalker.currentNode = getNodeAfter( startContainer, startOffset );
+
+        if( !contentWalker.currentNode ) {
+            contentWalker.currentNode = startContainer;
+        }
     }
 
     // Otherwise, look for any previous content in the same block.
@@ -2292,6 +2296,68 @@ var onPaste = function ( event ) {
         }
     }, 0 );
 };
+
+var onDrag = function() {
+    this._isDragging = true;
+};
+
+var onDragend = function() {
+    this._isDragging = false;
+};
+
+var onDrop = function( event ) {
+    var dataTransfer = event.dataTransfer;
+
+    var hasFiles = ( dataTransfer && dataTransfer.files && dataTransfer.files.length );
+
+    if( !hasFiles ) {
+        var self = this;
+
+        // If we are dragging and dropping within the editor, we will save the
+        // undo state and allow default browser behavior.
+        if( this._isDragging ) {
+            this._isDragging = false;
+            var selectedRange = this.getSelection();
+            this.saveUndoState();
+            this.setSelection( selectedRange );
+
+            return;
+        }
+
+        var insertHtmlItem = function ( html ) {
+            self.insertHTML( html, true );
+        };
+
+        if( dataTransfer.items ) {
+            for( var i = 0; i < dataTransfer.items.length; i++ ) {
+                var item = dataTransfer.items[i];
+                if( item.type === 'text/html') {
+                    event.preventDefault();
+
+                    item.getAsString( insertHtmlItem );
+
+                    return;
+                }
+            }
+        }
+
+        // Some browsers will not put the html on the drop event. So we will wait
+        // until after the drop to clean it.
+        var range = this.getSelection();
+        this.saveUndoState();
+        this.setSelection( range );
+        setTimeout( function () {
+            try {
+                cleanTree( self._root );
+                addLinks( range.startContainer, self._root, self );
+
+            } catch ( error ) {
+                self.didError( error );
+            }
+        }, 0 );
+    }
+};
+
 var instances = [];
 
 function getSquireInstance ( doc ) {
@@ -2389,6 +2455,10 @@ function Squire ( root, config ) {
     this.addEventListener( 'copy', onCopy );
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
 
+    // Drag drop listeners
+    this._isDragging = false;
+    this.addEventListener( 'drag', onDrag );
+    this.addEventListener( 'dragend', onDragend );
     this.addEventListener( 'drop', onDrop );
 
     // Opera does not fire keydown repeatedly.
@@ -2613,19 +2683,6 @@ proto.removeEventListener = function ( type, fn ) {
     return this;
 };
 
-var onDrop = function( event ) {
-    var dataTransfer = event.dataTransfer,
-        types = dataTransfer && dataTransfer.types;
-
-    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
-
-    if( !hasFiles ) {
-        var range = this.getSelection();
-        this._recordUndoState( range );
-        this._getRangeAndRemoveBookmark( range );
-        this.setSelection( range );
-    }
-};
 
 // --- Selection and Path ---
 
