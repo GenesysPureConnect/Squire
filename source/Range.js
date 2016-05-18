@@ -312,22 +312,6 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
     }
 };
 
-// Gets the last and deepest text node of a given node tree.
-// We use this text node as a focus target.
-function getLastTextNode(node) {
-    var child = node.lastChild;
-    while( child ) {
-        if ( child.nodeType === TEXT_NODE ) {
-            return child;
-        }
-        var text = getLastTextNode( child );
-        if( text ) {
-            return text;
-        }
-        child = child.previousSibling;
-    }
-}
-
 // ---
 
 var isNodeContainedInRange = function ( range, node, partial ) {
