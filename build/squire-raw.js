@@ -2510,6 +2510,10 @@ proto.setConfig = function ( config ) {
             ol: null,
             li: null,
             a: null
+        },
+        undo: {
+            documentSizeThreshold: -1, // -1 means no threshold
+            undoLimit: -1 // -1 means no limit
         }
     }, config );
 
@@ -2608,6 +2612,11 @@ proto.destroy = function () {
     var root = this._root,
         events = this._events,
         type;
+
+    this._undoIndex = -1;
+    this._undoStack = [];
+    this._undoStackLength = 0;
+
     for ( type in events ) {
         if ( !customEvents[ type ] ) {
             root.removeEventListener( type, this, true );
@@ -3027,6 +3036,12 @@ proto._docWasChanged = function () {
     this.fireEvent( 'input' );
 };
 
+// Gets the size of the document in bytes.
+var documentSizeInBytes = function () {
+    // Javascript uses 2 bytes per character
+    return this._getHTML().length * 2;
+};
+
 // Leaves bookmark
 proto._recordUndoState = function ( range ) {
     // Don't record if we're already in an undo state
@@ -3038,6 +3053,25 @@ proto._recordUndoState = function ( range ) {
         // Truncate stack if longer (i.e. if has been previously undone)
         if ( undoIndex < this._undoStackLength ) {
             undoStack.length = this._undoStackLength = undoIndex;
+        }
+
+        // Truncate stack if longer (i.e. if has been previously undone)
+        if ( undoIndex < this._undoStackLength ) {
+            undoStack.length = this._undoStackLength = undoIndex;
+        }
+
+        var undoThreshold = this._config.undo.documentSizeThreshold,
+            undoLimit = this._config.undo.undoLimit;
+
+        // If this document is above the configured size threshold, limit the number
+        // of saved undo states.
+        if( undoThreshold > -1 && undoThreshold <= documentSizeInBytes.call( this ) ) {
+            if( undoLimit > -1 && undoLimit < undoIndex ) {
+                undoStack.splice( 0, undoIndex - undoLimit );
+
+                undoIndex = this._undoIndex = undoLimit;
+                this._undoStackLength = undoStack.length;
+            }
         }
 
         // Write out data
