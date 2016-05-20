@@ -982,22 +982,6 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
     }
 };
 
-// Gets the last and deepest text node of a given node tree.
-// We use this text node as a focus target.
-function getLastTextNode(node) {
-    var child = node.lastChild;
-    while( child ) {
-        if ( child.nodeType === TEXT_NODE ) {
-            return child;
-        }
-        var text = getLastTextNode( child );
-        if( text ) {
-            return text;
-        }
-        child = child.previousSibling;
-    }
-}
-
 // ---
 
 var isNodeContainedInRange = function ( range, node, partial ) {
@@ -1165,6 +1149,10 @@ var rangeDoesStartAtBlockBoundary = function ( range, root ) {
         contentWalker.currentNode = startContainer;
     } else {
         contentWalker.currentNode = getNodeAfter( startContainer, startOffset );
+
+        if( !contentWalker.currentNode ) {
+            contentWalker.currentNode = startContainer;
+        }
     }
 
     // Otherwise, look for any previous content in the same block.
@@ -1710,7 +1698,7 @@ var fontSizes = {
     7: 48
 };
 
-var spanToSemantic = {
+var nodeToSemantic = {
     backgroundColor: {
         regexp: notWS,
         replace: function ( doc, colour ) {
@@ -1758,7 +1746,13 @@ var spanToSemantic = {
                 style: 'font-size:' + size
             });
         }
-    }
+    },
+    textDecoration: {
+        regexp: /^underline/i,
+        replace: function ( doc ) {
+            return createElement( doc, 'U' );
+        }
+    },
 };
 
 var replaceWithTag = function ( tag ) {
@@ -1770,17 +1764,18 @@ var replaceWithTag = function ( tag ) {
     };
 };
 
-var stylesRewriters = {
-    SPAN: function ( span, parent ) {
-        var style = span.style,
-            doc = span.ownerDocument,
-            attr, converter, css, newTreeBottom, newTreeTop, el;
+var replaceStyles = function ( node, parent ) {
+    var style = node.style,
+        doc = node.ownerDocument,
+        attr, converter, css, newTreeBottom, newTreeTop, el;
 
-        for ( attr in spanToSemantic ) {
-            converter = spanToSemantic[ attr ];
-            css = style[ attr ];
-            if ( css && converter.regexp.test( css ) ) {
-                el = converter.replace( doc, css );
+    for ( attr in nodeToSemantic ) {
+        converter = nodeToSemantic[ attr ];
+        css = style[ attr ];
+        if ( css && converter.regexp.test( css ) ) {
+            el = converter.replace( doc, css );
+            //No need to clean node that is already clean
+            if(el.style.cssText !== style.cssText) {
                 if ( newTreeBottom ) {
                     newTreeBottom.appendChild( el );
                 }
@@ -1788,19 +1783,27 @@ var stylesRewriters = {
                 if ( !newTreeTop ) {
                     newTreeTop = el;
                 }
+
+                node.style[ attr ] = '';
             }
         }
+    }
 
-        if ( newTreeTop ) {
-            newTreeBottom.appendChild( empty( span ) );
-            parent.replaceChild( newTreeTop, span );
-        }
+    if ( newTreeTop ) {
+        newTreeBottom.appendChild( node.cloneNode(true) );
+        parent.replaceChild( newTreeTop, node );
+    }
 
-        return newTreeBottom || span;
-    },
+    return newTreeBottom || node;
+};
+
+var stylesRewriters = {
+    SPAN: replaceStyles,
+    P: replaceStyles,
     STRONG: replaceWithTag( 'B' ),
     EM: replaceWithTag( 'I' ),
     STRIKE: replaceWithTag( 'S' ),
+    INS: replaceWithTag( 'U' ),
     FONT: function ( node, parent ) {
         var face = node.face,
             size = node.size,
@@ -2004,6 +2007,19 @@ var isLineBreak = function ( br ) {
     return !!walker.nextNode();
 };
 
+
+// Cleanup the <WBR> tags -- if we need them, we can add them again
+// later.
+var cleanupWBRs = function ( node ) {
+    var wbrs = node.querySelectorAll( 'WBR' ),
+        wl = wbrs.length, wbr;
+
+    while ( wl-- ) {
+        wbr = wbrs[wl];
+        detach(wbr);
+    }
+};
+
 // <br> elements are treated specially, and differently depending on the
 // browser, when in rich text editor mode. When adding HTML from external
 // sources, we must remove them, replacing the ones that actually affect
@@ -2040,15 +2056,7 @@ var cleanupBRs = function ( node, root ) {
         }
     }
 
-    // Cleanup the <WBR> tags -- if we need them, we can add them again
-    // later.
-    var wbrs = root.querySelectorAll( 'WBR' ),
-        wl = wbrs.length, wbr;
-
-    while ( wl-- ) {
-        wbr = wbrs[wl];
-        detach(wbr);
-    }
+    cleanupWBRs( node );
 };
 
 var onCut = function ( event ) {
@@ -2272,6 +2280,68 @@ var onPaste = function ( event ) {
         }
     }, 0 );
 };
+
+var onDrag = function() {
+    this._isDragging = true;
+};
+
+var onDragend = function() {
+    this._isDragging = false;
+};
+
+var onDrop = function( event ) {
+    var dataTransfer = event.dataTransfer;
+
+    var hasFiles = ( dataTransfer && dataTransfer.files && dataTransfer.files.length );
+
+    if( !hasFiles ) {
+        var self = this;
+
+        // If we are dragging and dropping within the editor, we will save the
+        // undo state and allow default browser behavior.
+        if( this._isDragging ) {
+            this._isDragging = false;
+            var selectedRange = this.getSelection();
+            this.saveUndoState();
+            this.setSelection( selectedRange );
+
+            return;
+        }
+
+        var insertHtmlItem = function ( html ) {
+            self.insertHTML( html, true );
+        };
+
+        if( dataTransfer.items ) {
+            for( var i = 0; i < dataTransfer.items.length; i++ ) {
+                var item = dataTransfer.items[i];
+                if( item.type === 'text/html') {
+                    event.preventDefault();
+
+                    item.getAsString( insertHtmlItem );
+
+                    return;
+                }
+            }
+        }
+
+        // Some browsers will not put the html on the drop event. So we will wait
+        // until after the drop to clean it.
+        var range = this.getSelection();
+        this.saveUndoState();
+        this.setSelection( range );
+        setTimeout( function () {
+            try {
+                cleanTree( self._root );
+                addLinks( range.startContainer, self._root, self );
+
+            } catch ( error ) {
+                self.didError( error );
+            }
+        }, 0 );
+    }
+};
+
 var instances = [];
 
 function getSquireInstance ( doc ) {
@@ -2369,6 +2439,12 @@ function Squire ( root, config ) {
     this.addEventListener( 'copy', onCopy );
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
 
+    // Drag drop listeners
+    this._isDragging = false;
+    this.addEventListener( 'drag', onDrag );
+    this.addEventListener( 'dragend', onDragend );
+    this.addEventListener( 'drop', onDrop );
+
     // Opera does not fire keydown repeatedly.
     this.addEventListener( isPresto ? 'keypress' : 'keydown', onKey );
 
@@ -2434,6 +2510,10 @@ proto.setConfig = function ( config ) {
             ol: null,
             li: null,
             a: null
+        },
+        undo: {
+            documentSizeThreshold: -1, // -1 means no threshold
+            undoLimit: -1 // -1 means no limit
         }
     }, config );
 
@@ -2532,6 +2612,11 @@ proto.destroy = function () {
     var root = this._root,
         events = this._events,
         type;
+
+    this._undoIndex = -1;
+    this._undoStack = [];
+    this._undoStackLength = 0;
+
     for ( type in events ) {
         if ( !customEvents[ type ] ) {
             root.removeEventListener( type, this, true );
@@ -2590,6 +2675,7 @@ proto.removeEventListener = function ( type, fn ) {
     }
     return this;
 };
+
 
 // --- Selection and Path ---
 
@@ -2907,21 +2993,9 @@ proto._getRangeAndRemoveBookmark = function ( range ) {
         range.setEnd( _range.endContainer, _range.endOffset );
         collapsed = range.collapsed;
 
-        // If we didn't split a text node, we should move into any adjacent
-        // text node to current selection point
+        moveRangeBoundariesDownTree( range );
         if ( collapsed ) {
-            startContainer = range.startContainer;
-            if ( startContainer.nodeType === TEXT_NODE ) {
-                endContainer = startContainer.childNodes[ range.startOffset ];
-                if ( !endContainer || endContainer.nodeType !== TEXT_NODE ) {
-                    endContainer =
-                        startContainer.childNodes[ range.startOffset - 1 ];
-                }
-                if ( endContainer && endContainer.nodeType === TEXT_NODE ) {
-                    range.setStart( endContainer, 0 );
-                    range.collapse( true );
-                }
-            }
+            range.collapse( true );
         }
     }
     return range || null;
@@ -2962,6 +3036,12 @@ proto._docWasChanged = function () {
     this.fireEvent( 'input' );
 };
 
+// Gets the size of the document in bytes.
+var documentSizeInBytes = function () {
+    // Javascript uses 2 bytes per character
+    return this._getHTML().length * 2;
+};
+
 // Leaves bookmark
 proto._recordUndoState = function ( range ) {
     // Don't record if we're already in an undo state
@@ -2973,6 +3053,25 @@ proto._recordUndoState = function ( range ) {
         // Truncate stack if longer (i.e. if has been previously undone)
         if ( undoIndex < this._undoStackLength ) {
             undoStack.length = this._undoStackLength = undoIndex;
+        }
+
+        // Truncate stack if longer (i.e. if has been previously undone)
+        if ( undoIndex < this._undoStackLength ) {
+            undoStack.length = this._undoStackLength = undoIndex;
+        }
+
+        var undoThreshold = this._config.undo.documentSizeThreshold,
+            undoLimit = this._config.undo.undoLimit;
+
+        // If this document is above the configured size threshold, limit the number
+        // of saved undo states.
+        if( undoThreshold > -1 && undoThreshold <= documentSizeInBytes.call( this ) ) {
+            if( undoLimit > -1 && undoLimit < undoIndex ) {
+                undoStack.splice( 0, undoIndex - undoLimit );
+
+                undoIndex = this._undoIndex = undoLimit;
+                this._undoStackLength = undoStack.length;
+            }
         }
 
         // Write out data
@@ -3783,67 +3882,36 @@ proto.setHTML = function ( html ) {
 
 proto.insertElement = function ( el, range ) {
     if ( !range ) { range = this.getSelection(); }
-
-    // Record undo checkpoint
-    this._recordUndoState( range );
-    this._getRangeAndRemoveBookmark( range );
-    // Delete any selected content
-    if ( !range.collapsed ) {
-        deleteContentsOfRange( range );
-        range.collapse( true );
-    }
-
+    range.collapse( true );
     if ( isInline( el ) ) {
         insertNodeInRange( range, el );
         range.setStartAfter( el );
     } else {
         // Get containing block node.
         var root = this._root;
-        var body = root,
-            splitNode = getStartBlockOfRange( range, root ),
-            parent, nodeAfterSplit;
-
-        if( splitNode ) {
-            // if we have a splitNode, then we just insert the new element before the splitNode.
-            var currentText = splitNode.textContent;
-            // if this an empty block or a block with just ZWSs, then insert the new element before this line.
-            var isNewEmptyLine = ( splitNode.textContent === "" || (/^[\u200b]+$/).test( splitNode.textContent ));
-            // splitNode must not be the body, this to avoid inserting the new element before <body>
-            if ( isNewEmptyLine && splitNode !== body ) {
-                splitNode.parentNode.insertBefore( el, splitNode );
-            } else {
-                // If in a list, we'll split the LI instead.
-                if ( parent = getNearest( splitNode, 'LI' ) ) {
-                    splitNode = parent;
-                }
-
-                if ( !splitNode.textContent ) {
-                    // Break list
-                    if ( getNearest( splitNode, 'UL' ) || getNearest( splitNode, 'OL' ) ) {
-                        return self.modifyBlocks( decreaseListLevel, range );
-                    }
-                    // Break blockquote
-                    else if ( getNearest( splitNode, 'BLOCKQUOTE' ) ) {
-                        return self.modifyBlocks( removeBlockQuote, range );
-                    }
-                }
-                // Otherwise, split at cursor point.
-                nodeAfterSplit = splitBlock( this, splitNode,
-                    range.startContainer, range.startOffset );
-                nodeAfterSplit.insertBefore( el, nodeAfterSplit.firstChild );
-            }
-        } else {
-            // we get into this situation if we have inline element all the way up to the body, something like <body><span>text</span></body>
-            var directChildOfBody = range.commonAncestorContainer;
-            while( directChildOfBody.parentElement !== body ) {
-                directChildOfBody = directChildOfBody.parentNode;
-            }
-            body.insertBefore( el, directChildOfBody.nextSibling );
+        var splitNode = getStartBlockOfRange( range, root ) || root;
+        var parent, nodeAfterSplit;
+        // While at end of container node, move up DOM tree.
+        while ( splitNode !== root && !splitNode.nextSibling ) {
+            splitNode = splitNode.parentNode;
         }
+        // If in the middle of a container node, split up to root.
+        if ( splitNode !== root ) {
+            parent = splitNode.parentNode;
+            nodeAfterSplit = split( parent, splitNode.nextSibling, root, root );
+        }
+        if ( nodeAfterSplit ) {
+            root.insertBefore( el, nodeAfterSplit );
+        } else {
+            root.appendChild( el );
+            // Insert blank line below block.
+            nodeAfterSplit = this.createDefaultBlock();
+            root.appendChild( nodeAfterSplit );
+        }
+        range.setStart( nodeAfterSplit, 0 );
+        range.setEnd( nodeAfterSplit, 0 );
+        moveRangeBoundariesDownTree( range );
     }
-
-    range.selectNode( getLastTextNode( el ) || el );
-    range.collapse( false );
     this.focus();
     this.setSelection( range );
     this._updatePath( range );

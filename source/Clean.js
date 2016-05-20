@@ -10,7 +10,7 @@ var fontSizes = {
     7: 48
 };
 
-var spanToSemantic = {
+var nodeToSemantic = {
     backgroundColor: {
         regexp: notWS,
         replace: function ( doc, colour ) {
@@ -58,7 +58,13 @@ var spanToSemantic = {
                 style: 'font-size:' + size
             });
         }
-    }
+    },
+    textDecoration: {
+        regexp: /^underline/i,
+        replace: function ( doc ) {
+            return createElement( doc, 'U' );
+        }
+    },
 };
 
 var replaceWithTag = function ( tag ) {
@@ -70,17 +76,18 @@ var replaceWithTag = function ( tag ) {
     };
 };
 
-var stylesRewriters = {
-    SPAN: function ( span, parent ) {
-        var style = span.style,
-            doc = span.ownerDocument,
-            attr, converter, css, newTreeBottom, newTreeTop, el;
+var replaceStyles = function ( node, parent ) {
+    var style = node.style,
+        doc = node.ownerDocument,
+        attr, converter, css, newTreeBottom, newTreeTop, el;
 
-        for ( attr in spanToSemantic ) {
-            converter = spanToSemantic[ attr ];
-            css = style[ attr ];
-            if ( css && converter.regexp.test( css ) ) {
-                el = converter.replace( doc, css );
+    for ( attr in nodeToSemantic ) {
+        converter = nodeToSemantic[ attr ];
+        css = style[ attr ];
+        if ( css && converter.regexp.test( css ) ) {
+            el = converter.replace( doc, css );
+            //No need to clean node that is already clean
+            if(el.style.cssText !== style.cssText) {
                 if ( newTreeBottom ) {
                     newTreeBottom.appendChild( el );
                 }
@@ -88,19 +95,27 @@ var stylesRewriters = {
                 if ( !newTreeTop ) {
                     newTreeTop = el;
                 }
+
+                node.style[ attr ] = '';
             }
         }
+    }
 
-        if ( newTreeTop ) {
-            newTreeBottom.appendChild( empty( span ) );
-            parent.replaceChild( newTreeTop, span );
-        }
+    if ( newTreeTop ) {
+        newTreeBottom.appendChild( node.cloneNode(true) );
+        parent.replaceChild( newTreeTop, node );
+    }
 
-        return newTreeBottom || span;
-    },
+    return newTreeBottom || node;
+};
+
+var stylesRewriters = {
+    SPAN: replaceStyles,
+    P: replaceStyles,
     STRONG: replaceWithTag( 'B' ),
     EM: replaceWithTag( 'I' ),
     STRIKE: replaceWithTag( 'S' ),
+    INS: replaceWithTag( 'U' ),
     FONT: function ( node, parent ) {
         var face = node.face,
             size = node.size,
@@ -304,6 +319,19 @@ var isLineBreak = function ( br ) {
     return !!walker.nextNode();
 };
 
+
+// Cleanup the <WBR> tags -- if we need them, we can add them again
+// later.
+var cleanupWBRs = function ( node ) {
+    var wbrs = node.querySelectorAll( 'WBR' ),
+        wl = wbrs.length, wbr;
+
+    while ( wl-- ) {
+        wbr = wbrs[wl];
+        detach(wbr);
+    }
+};
+
 // <br> elements are treated specially, and differently depending on the
 // browser, when in rich text editor mode. When adding HTML from external
 // sources, we must remove them, replacing the ones that actually affect
@@ -340,13 +368,5 @@ var cleanupBRs = function ( node, root ) {
         }
     }
 
-    // Cleanup the <WBR> tags -- if we need them, we can add them again
-    // later.
-    var wbrs = root.querySelectorAll( 'WBR' ),
-        wl = wbrs.length, wbr;
-
-    while ( wl-- ) {
-        wbr = wbrs[wl];
-        detach(wbr);
-    }
+    cleanupWBRs( node );
 };
