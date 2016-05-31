@@ -982,22 +982,6 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
     }
 };
 
-// Gets the last and deepest text node of a given node tree.
-// We use this text node as a focus target.
-function getLastTextNode(node) {
-    var child = node.lastChild;
-    while( child ) {
-        if ( child.nodeType === TEXT_NODE ) {
-            return child;
-        }
-        var text = getLastTextNode( child );
-        if( text ) {
-            return text;
-        }
-        child = child.previousSibling;
-    }
-}
-
 // ---
 
 var isNodeContainedInRange = function ( range, node, partial ) {
@@ -1165,6 +1149,10 @@ var rangeDoesStartAtBlockBoundary = function ( range, root ) {
         contentWalker.currentNode = startContainer;
     } else {
         contentWalker.currentNode = getNodeAfter( startContainer, startOffset );
+
+        if( !contentWalker.currentNode ) {
+            contentWalker.currentNode = startContainer;
+        }
     }
 
     // Otherwise, look for any previous content in the same block.
@@ -2293,14 +2281,32 @@ var onPaste = function ( event ) {
     }, 0 );
 };
 
-var onDrop = function( event ) {
-    var dataTransfer = event.dataTransfer,
-        types = dataTransfer && dataTransfer.types;
+var onDrag = function() {
+    this._isDragging = true;
+};
 
-    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
+var onDragend = function() {
+    this._isDragging = false;
+};
+
+var onDrop = function( event ) {
+    var dataTransfer = event.dataTransfer;
+
+    var hasFiles = ( dataTransfer && dataTransfer.files && dataTransfer.files.length );
 
     if( !hasFiles ) {
         var self = this;
+
+        // If we are dragging and dropping within the editor, we will save the
+        // undo state and allow default browser behavior.
+        if( this._isDragging ) {
+            this._isDragging = false;
+            var selectedRange = this.getSelection();
+            this.saveUndoState();
+            this.setSelection( selectedRange );
+
+            return;
+        }
 
         var insertHtmlItem = function ( html ) {
             self.insertHTML( html, true );
@@ -2433,6 +2439,10 @@ function Squire ( root, config ) {
     this.addEventListener( 'copy', onCopy );
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
 
+    // Drag drop listeners
+    this._isDragging = false;
+    this.addEventListener( 'drag', onDrag );
+    this.addEventListener( 'dragend', onDragend );
     this.addEventListener( 'drop', onDrop );
 
     // Opera does not fire keydown repeatedly.
@@ -2500,6 +2510,10 @@ proto.setConfig = function ( config ) {
             ol: null,
             li: null,
             a: null
+        },
+        undo: {
+            documentSizeThreshold: -1, // -1 means no threshold
+            undoLimit: -1 // -1 means no limit
         }
     }, config );
 
@@ -2598,6 +2612,11 @@ proto.destroy = function () {
     var root = this._root,
         events = this._events,
         type;
+
+    this._undoIndex = -1;
+    this._undoStack = [];
+    this._undoStackLength = 0;
+
     for ( type in events ) {
         if ( !customEvents[ type ] ) {
             root.removeEventListener( type, this, true );
@@ -3017,6 +3036,12 @@ proto._docWasChanged = function () {
     this.fireEvent( 'input' );
 };
 
+// Gets the size of the document in bytes.
+var documentSizeInBytes = function () {
+    // Javascript uses 2 bytes per character
+    return this._getHTML().length * 2;
+};
+
 // Leaves bookmark
 proto._recordUndoState = function ( range ) {
     // Don't record if we're already in an undo state
@@ -3028,6 +3053,25 @@ proto._recordUndoState = function ( range ) {
         // Truncate stack if longer (i.e. if has been previously undone)
         if ( undoIndex < this._undoStackLength ) {
             undoStack.length = this._undoStackLength = undoIndex;
+        }
+
+        // Truncate stack if longer (i.e. if has been previously undone)
+        if ( undoIndex < this._undoStackLength ) {
+            undoStack.length = this._undoStackLength = undoIndex;
+        }
+
+        var undoThreshold = this._config.undo.documentSizeThreshold,
+            undoLimit = this._config.undo.undoLimit;
+
+        // If this document is above the configured size threshold, limit the number
+        // of saved undo states.
+        if( undoThreshold > -1 && undoThreshold <= documentSizeInBytes.call( this ) ) {
+            if( undoLimit > -1 && undoLimit < undoIndex ) {
+                undoStack.splice( 0, undoIndex - undoLimit );
+
+                undoIndex = this._undoIndex = undoLimit;
+                this._undoStackLength = undoStack.length;
+            }
         }
 
         // Write out data
@@ -3751,6 +3795,7 @@ proto._setHTML = function ( html ) {
     do {
         fixCursor( node, root );
     } while ( node = getNextBlock( node, root ) );
+    this._ignoreChange = true;
 };
 
 proto.getHTML = function ( withBookMark ) {
@@ -3838,67 +3883,36 @@ proto.setHTML = function ( html ) {
 
 proto.insertElement = function ( el, range ) {
     if ( !range ) { range = this.getSelection(); }
-
-    // Record undo checkpoint
-    this._recordUndoState( range );
-    this._getRangeAndRemoveBookmark( range );
-    // Delete any selected content
-    if ( !range.collapsed ) {
-        deleteContentsOfRange( range );
-        range.collapse( true );
-    }
-
+    range.collapse( true );
     if ( isInline( el ) ) {
         insertNodeInRange( range, el );
         range.setStartAfter( el );
     } else {
         // Get containing block node.
         var root = this._root;
-        var body = root,
-            splitNode = getStartBlockOfRange( range, root ),
-            parent, nodeAfterSplit;
-
-        if( splitNode ) {
-            // if we have a splitNode, then we just insert the new element before the splitNode.
-            var currentText = splitNode.textContent;
-            // if this an empty block or a block with just ZWSs, then insert the new element before this line.
-            var isNewEmptyLine = ( splitNode.textContent === "" || (/^[\u200b]+$/).test( splitNode.textContent ));
-            // splitNode must not be the body, this to avoid inserting the new element before <body>
-            if ( isNewEmptyLine && splitNode !== body ) {
-                splitNode.parentNode.insertBefore( el, splitNode );
-            } else {
-                // If in a list, we'll split the LI instead.
-                if ( parent = getNearest( splitNode, 'LI' ) ) {
-                    splitNode = parent;
-                }
-
-                if ( !splitNode.textContent ) {
-                    // Break list
-                    if ( getNearest( splitNode, 'UL' ) || getNearest( splitNode, 'OL' ) ) {
-                        return this.modifyBlocks( decreaseListLevel, range );
-                    }
-                    // Break blockquote
-                    else if ( getNearest( splitNode, 'BLOCKQUOTE' ) ) {
-                        return this.modifyBlocks( removeBlockQuote, range );
-                    }
-                }
-                // Otherwise, split at cursor point.
-                nodeAfterSplit = splitBlock( this, splitNode,
-                    range.startContainer, range.startOffset );
-                nodeAfterSplit.insertBefore( el, nodeAfterSplit.firstChild );
-            }
-        } else {
-            // we get into this situation if we have inline element all the way up to the body, something like <body><span>text</span></body>
-            var directChildOfBody = range.commonAncestorContainer;
-            while( directChildOfBody.parentElement !== body ) {
-                directChildOfBody = directChildOfBody.parentNode;
-            }
-            body.insertBefore( el, directChildOfBody.nextSibling );
+        var splitNode = getStartBlockOfRange( range, root ) || root;
+        var parent, nodeAfterSplit;
+        // While at end of container node, move up DOM tree.
+        while ( splitNode !== root && !splitNode.nextSibling ) {
+            splitNode = splitNode.parentNode;
         }
+        // If in the middle of a container node, split up to root.
+        if ( splitNode !== root ) {
+            parent = splitNode.parentNode;
+            nodeAfterSplit = split( parent, splitNode.nextSibling, root, root );
+        }
+        if ( nodeAfterSplit ) {
+            root.insertBefore( el, nodeAfterSplit );
+        } else {
+            root.appendChild( el );
+            // Insert blank line below block.
+            nodeAfterSplit = this.createDefaultBlock();
+            root.appendChild( nodeAfterSplit );
+        }
+        range.setStart( nodeAfterSplit, 0 );
+        range.setEnd( nodeAfterSplit, 0 );
+        moveRangeBoundariesDownTree( range );
     }
-
-    range.selectNode( getLastTextNode( el ) || el );
-    range.collapse( false );
     this.focus();
     this.setSelection( range );
     this._updatePath( range );
