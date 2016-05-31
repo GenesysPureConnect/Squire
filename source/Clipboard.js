@@ -230,52 +230,40 @@ var onDragend = function() {
     this._isDragging = false;
 };
 
-var onDrop = function( event ) {
-    var dataTransfer = event.dataTransfer;
-
-    var hasFiles = ( dataTransfer && dataTransfer.files && dataTransfer.files.length );
-
-    if( !hasFiles ) {
-        var self = this;
-
-        // If we are dragging and dropping within the editor, we will save the
-        // undo state and allow default browser behavior.
-        if( this._isDragging ) {
-            this._isDragging = false;
-            var selectedRange = this.getSelection();
-            this.saveUndoState();
-            this.setSelection( selectedRange );
-
-            return;
+// On Windows and Macs you can drag an drop text. We can't handle this ourselves, because
+// as far as I can see, there's no way to get the drop insertion point. So just
+// save an undo state and hope for the best.
+var onDrop = function ( event ) {
+    var types = event.dataTransfer.types;
+    var l = types.length;
+    var hasPlain = false;
+    var hasHTML = false;
+    while ( l-- ) {
+        switch ( types[l] ) {
+        case 'text/plain':
+        case 'Text': // IE Specific
+            hasPlain = true;
+            break;
+        case 'text/html':
+            hasHTML = true;
+            break;
+        default:
+            break;
         }
+    }
 
-        var insertHtmlItem = function ( html ) {
-            self.insertHTML( html, true );
-        };
-
-        if( dataTransfer.items ) {
-            for( var i = 0; i < dataTransfer.items.length; i++ ) {
-                var item = dataTransfer.items[i];
-                if( item.type === 'text/html') {
-                    event.preventDefault();
-
-                    item.getAsString( insertHtmlItem );
-
-                    return;
-                }
-            }
-        }
-
-        // Some browsers will not put the html on the drop event. So we will wait
-        // until after the drop to clean it.
+    if ( hasHTML || hasPlain ) {
         var range = this.getSelection();
         this.saveUndoState();
         this.setSelection( range );
+
+        // Wait until the drop occurs then clean it. Ideally we would only do this
+        // for HTML drops, but some browsers send HTML as text/plain.
+        var self = this;
         setTimeout( function () {
             try {
                 cleanTree( self._root );
-                addLinks( range.startContainer, self._root, self );
-
+                addLinks( self._root, self._root, self );
             } catch ( error ) {
                 self.didError( error );
             }
