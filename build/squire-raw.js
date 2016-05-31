@@ -2281,14 +2281,6 @@ var onPaste = function ( event ) {
     }, 0 );
 };
 
-var onDrag = function() {
-    this._isDragging = true;
-};
-
-var onDragend = function() {
-    this._isDragging = false;
-};
-
 // On Windows and Macs you can drag an drop text. We can't handle this ourselves, because
 // as far as I can see, there's no way to get the drop insertion point. So just
 // save an undo state and hope for the best.
@@ -2427,10 +2419,6 @@ function Squire ( root, config ) {
     this.addEventListener( 'copy', onCopy );
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
 
-    // Drag drop listeners
-    this._isDragging = false;
-    this.addEventListener( 'drag', onDrag );
-    this.addEventListener( 'dragend', onDragend );
     this.addEventListener( 'drop', onDrop );
 
     // Opera does not fire keydown repeatedly.
