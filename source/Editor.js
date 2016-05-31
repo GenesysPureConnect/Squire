@@ -97,10 +97,6 @@ function Squire ( root, config ) {
     this.addEventListener( 'copy', onCopy );
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
 
-    // Drag drop listeners
-    this._isDragging = false;
-    this.addEventListener( 'drag', onDrag );
-    this.addEventListener( 'dragend', onDragend );
     this.addEventListener( 'drop', onDrop );
 
     // Opera does not fire keydown repeatedly.
