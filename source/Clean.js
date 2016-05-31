@@ -10,7 +10,7 @@ var fontSizes = {
     7: 48
 };
 
-var nodeToSemantic = {
+var styleToSemantic = {
     backgroundColor: {
         regexp: notWS,
         replace: function ( doc, colour ) {
@@ -64,7 +64,7 @@ var nodeToSemantic = {
         replace: function ( doc ) {
             return createElement( doc, 'U' );
         }
-    },
+    }
 };
 
 var replaceWithTag = function ( tag ) {
@@ -77,43 +77,44 @@ var replaceWithTag = function ( tag ) {
 };
 
 var replaceStyles = function ( node, parent ) {
-    var style = node.style,
-        doc = node.ownerDocument,
-        attr, converter, css, newTreeBottom, newTreeTop, el;
+    var style = node.style;
+    var doc = node.ownerDocument;
+    var attr, converter, css, newTreeBottom, newTreeTop, el;
 
-    for ( attr in nodeToSemantic ) {
-        converter = nodeToSemantic[ attr ];
+    for ( attr in styleToSemantic ) {
+        converter = styleToSemantic[ attr ];
         css = style[ attr ];
         if ( css && converter.regexp.test( css ) ) {
             el = converter.replace( doc, css );
-            //No need to clean node that is already clean
-            if(el.style.cssText !== style.cssText) {
-                if ( newTreeBottom ) {
-                    newTreeBottom.appendChild( el );
-                }
-                newTreeBottom = el;
-                if ( !newTreeTop ) {
-                    newTreeTop = el;
-                }
-
-                node.style[ attr ] = '';
+            if ( !newTreeTop ) {
+                newTreeTop = el;
             }
+            if ( newTreeBottom ) {
+                newTreeBottom.appendChild( el );
+            }
+            newTreeBottom = el;
+            node.style[ attr ] = '';
         }
     }
 
     if ( newTreeTop ) {
-        newTreeBottom.appendChild( node.cloneNode(true) );
-        parent.replaceChild( newTreeTop, node );
+        newTreeBottom.appendChild( empty( node ) );
+        if ( node.nodeName === 'SPAN' ) {
+            parent.replaceChild( newTreeTop, node );
+        } else {
+            node.appendChild( newTreeTop );
+        }
     }
 
     return newTreeBottom || node;
 };
 
 var stylesRewriters = {
-    SPAN: replaceStyles,
     P: replaceStyles,
+    SPAN: replaceStyles,
     STRONG: replaceWithTag( 'B' ),
     EM: replaceWithTag( 'I' ),
+    INS: replaceWithTag( 'U' ),
     STRIKE: replaceWithTag( 'S' ),
     INS: replaceWithTag( 'U' ),
     FONT: function ( node, parent ) {
