@@ -116,7 +116,6 @@ var stylesRewriters = {
     EM: replaceWithTag( 'I' ),
     INS: replaceWithTag( 'U' ),
     STRIKE: replaceWithTag( 'S' ),
-    INS: replaceWithTag( 'U' ),
     FONT: function ( node, parent ) {
         var face = node.face,
             size = node.size,
