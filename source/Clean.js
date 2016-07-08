@@ -10,12 +10,12 @@ var fontSizes = {
     7: 48
 };
 
-var spanToSemantic = {
+var styleToSemantic = {
     backgroundColor: {
         regexp: notWS,
         replace: function ( doc, colour ) {
             return createElement( doc, 'SPAN', {
-                'class': 'highlight',
+                'class': HIGHLIGHT_CLASS,
                 style: 'background-color:' + colour
             });
         }
@@ -24,7 +24,7 @@ var spanToSemantic = {
         regexp: notWS,
         replace: function ( doc, colour ) {
             return createElement( doc, 'SPAN', {
-                'class': 'colour',
+                'class': COLOUR_CLASS,
                 style: 'color:' + colour
             });
         }
@@ -45,7 +45,7 @@ var spanToSemantic = {
         regexp: notWS,
         replace: function ( doc, family ) {
             return createElement( doc, 'SPAN', {
-                'class': 'font',
+                'class': FONT_FAMILY_CLASS,
                 style: 'font-family:' + family
             });
         }
@@ -54,9 +54,15 @@ var spanToSemantic = {
         regexp: notWS,
         replace: function ( doc, size ) {
             return createElement( doc, 'SPAN', {
-                'class': 'size',
+                'class': FONT_SIZE_CLASS,
                 style: 'font-size:' + size
             });
+        }
+    },
+    textDecoration: {
+        regexp: /^underline/i,
+        replace: function ( doc ) {
+            return createElement( doc, 'U' );
         }
     }
 };
@@ -70,36 +76,45 @@ var replaceWithTag = function ( tag ) {
     };
 };
 
-var stylesRewriters = {
-    SPAN: function ( span, parent ) {
-        var style = span.style,
-            doc = span.ownerDocument,
-            attr, converter, css, newTreeBottom, newTreeTop, el;
+var replaceStyles = function ( node, parent ) {
+    var style = node.style;
+    var doc = node.ownerDocument;
+    var attr, converter, css, newTreeBottom, newTreeTop, el;
 
-        for ( attr in spanToSemantic ) {
-            converter = spanToSemantic[ attr ];
-            css = style[ attr ];
-            if ( css && converter.regexp.test( css ) ) {
-                el = converter.replace( doc, css );
-                if ( newTreeBottom ) {
-                    newTreeBottom.appendChild( el );
-                }
-                newTreeBottom = el;
-                if ( !newTreeTop ) {
-                    newTreeTop = el;
-                }
+    for ( attr in styleToSemantic ) {
+        converter = styleToSemantic[ attr ];
+        css = style[ attr ];
+        if ( css && converter.regexp.test( css ) ) {
+            el = converter.replace( doc, css );
+            if ( !newTreeTop ) {
+                newTreeTop = el;
             }
+            if ( newTreeBottom ) {
+                newTreeBottom.appendChild( el );
+            }
+            newTreeBottom = el;
+            node.style[ attr ] = '';
         }
+    }
 
-        if ( newTreeTop ) {
-            newTreeBottom.appendChild( empty( span ) );
-            parent.replaceChild( newTreeTop, span );
+    if ( newTreeTop ) {
+        newTreeBottom.appendChild( empty( node ) );
+        if ( node.nodeName === 'SPAN' ) {
+            parent.replaceChild( newTreeTop, node );
+        } else {
+            node.appendChild( newTreeTop );
         }
+    }
 
-        return newTreeBottom || span;
-    },
+    return newTreeBottom || node;
+};
+
+var stylesRewriters = {
+    P: replaceStyles,
+    SPAN: replaceStyles,
     STRONG: replaceWithTag( 'B' ),
     EM: replaceWithTag( 'I' ),
+    INS: replaceWithTag( 'U' ),
     STRIKE: replaceWithTag( 'S' ),
     FONT: function ( node, parent ) {
         var face = node.face,
@@ -304,6 +319,19 @@ var isLineBreak = function ( br ) {
     return !!walker.nextNode();
 };
 
+
+// Cleanup the <WBR> tags -- if we need them, we can add them again
+// later.
+var cleanupWBRs = function ( node ) {
+    var wbrs = node.querySelectorAll( 'WBR' ),
+        wl = wbrs.length, wbr;
+
+    while ( wl-- ) {
+        wbr = wbrs[wl];
+        detach(wbr);
+    }
+};
+
 // <br> elements are treated specially, and differently depending on the
 // browser, when in rich text editor mode. When adding HTML from external
 // sources, we must remove them, replacing the ones that actually affect
@@ -340,13 +368,5 @@ var cleanupBRs = function ( node, root ) {
         }
     }
 
-    // Cleanup the <WBR> tags -- if we need them, we can add them again
-    // later.
-    var wbrs = root.querySelectorAll( 'WBR' ),
-        wl = wbrs.length, wbr;
-
-    while ( wl-- ) {
-        wbr = wbrs[wl];
-        detach(wbr);
-    }
+    cleanupWBRs( node );
 };

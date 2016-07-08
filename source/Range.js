@@ -312,22 +312,6 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
     }
 };
 
-// Gets the last and deepest text node of a given node tree.
-// We use this text node as a focus target.
-function getLastTextNode(node) {
-    var child = node.lastChild;
-    while( child ) {
-        if ( child.nodeType === TEXT_NODE ) {
-            return child;
-        }
-        var text = getLastTextNode( child );
-        if( text ) {
-            return text;
-        }
-        child = child.previousSibling;
-    }
-}
-
 // ---
 
 var isNodeContainedInRange = function ( range, node, partial ) {
@@ -461,7 +445,7 @@ var getEndBlockOfRange = function ( range, root ) {
         block = container;
     } else {
         block = getNodeAfter( container, range.endOffset );
-        if ( !block ) {
+        if ( !block || !isOrContains( root, block ) ) {
             block = root;
             while ( child = block.lastChild ) {
                 block = child;
@@ -483,8 +467,9 @@ var contentWalker = new TreeWalker( null,
 );
 
 var rangeDoesStartAtBlockBoundary = function ( range, root ) {
-    var startContainer = range.startContainer,
-        startOffset = range.startOffset;
+    var startContainer = range.startContainer;
+    var startOffset = range.startOffset;
+    var nodeAfterCursor;
 
     // If in the middle or end of a text node, we're not at the boundary.
     contentWalker.root = null;
@@ -492,12 +477,24 @@ var rangeDoesStartAtBlockBoundary = function ( range, root ) {
         if ( startOffset ) {
             return false;
         }
-        contentWalker.currentNode = startContainer;
+        nodeAfterCursor = startContainer;
     } else {
-        contentWalker.currentNode = getNodeAfter( startContainer, startOffset );
+        nodeAfterCursor = getNodeAfter( startContainer, startOffset );
+        if ( nodeAfterCursor && !isOrContains( root, nodeAfterCursor ) ) {
+            nodeAfterCursor = null;
+        }
+        // The cursor was right at the end of the document
+        if ( !nodeAfterCursor ) {
+            nodeAfterCursor = getNodeBefore( startContainer, startOffset );
+            if ( nodeAfterCursor.nodeType === TEXT_NODE &&
+                    nodeAfterCursor.length ) {
+                return false;
+            }
+        }
     }
 
     // Otherwise, look for any previous content in the same block.
+    contentWalker.currentNode = nodeAfterCursor;
     contentWalker.root = getStartBlockOfRange( range, root );
 
     return !contentWalker.previousNode();
