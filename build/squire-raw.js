@@ -2133,26 +2133,7 @@ var onPaste = function ( event ) {
     if ( items && ( hasFiles || ( !isEdge && !hasHtml ))) {
         event.preventDefault();
         l = items.length;
-
-        // Trigger a willPaste event if these is an image type on the clipboardData.
-        for (var i = items.length - 1; i >= 0; i--) {
-            if ( /^image\/.*/.test( items[i].type ) ) {
-                hasImage = true;
-                var imagePasteEvent = {
-                    clipboardData: event.clipboardData,
-                    isImage: true,
-                    preventDefault: function () {
-                        this.defaultPrevented = true;
-                    },
-                    defaultPrevented: false
-                };
-
-                this.fireEvent( 'willPaste', imagePasteEvent);
-                return;
-            }
-        }
-
-        while (l-- ) {
+        while ( l-- ) {
             item = items[l];
             type = item.type;
             if ( type === 'text/html' ) {
@@ -2166,9 +2147,24 @@ var onPaste = function ( event ) {
             if ( type === 'text/plain' ) {
                 plainItem = item;
             }
+            if ( /^image\/.*/.test( type ) ) {
+                hasImage = true;
+            }
         }
+        // Trigger a willPaste event if these is an image type on the clipboardData.
+        if ( hasImage ) {
+            var imagePasteEvent = {
+                clipboardData: event.clipboardData,
+                isImage: true,
+                preventDefault: function () {
+                    this.defaultPrevented = true;
+                },
+                defaultPrevented: false
+            };
 
-        if ( plainItem ) {
+            this.fireEvent( 'willPaste', imagePasteEvent);
+
+        } else if ( plainItem ) {
             item.getAsString( function ( text ) {
                 self.insertPlainText( text, true );
             });
