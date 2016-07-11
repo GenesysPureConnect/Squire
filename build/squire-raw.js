@@ -2142,7 +2142,6 @@ var onCopy = function ( event ) {
 var onPaste = function ( event ) {
     var clipboardData = event.clipboardData,
         items = clipboardData && clipboardData.items,
-        hasImage = false,
         plainItem = null,
         self = this,
         l, item, type, types, data;
@@ -2172,10 +2171,9 @@ var onPaste = function ( event ) {
         event.preventDefault();
         l = items.length;
 
-        // Trigger a willPaste event if these is an image type on the clipboardData.
-        for (var i = items.length - 1; i >= 0; i--) {
+        // Trigger a willPaste event if there is an image type on the clipboardData.
+        for ( var i = items.length - 1; i >= 0; i-- ) {
             if ( /^image\/.*/.test( items[i].type ) ) {
-                hasImage = true;
                 var imagePasteEvent = {
                     clipboardData: event.clipboardData,
                     isImage: true,
@@ -2185,12 +2183,12 @@ var onPaste = function ( event ) {
                     defaultPrevented: false
                 };
 
-                this.fireEvent( 'willPaste', imagePasteEvent);
+                this.fireEvent( 'willPaste', imagePasteEvent );
                 return;
             }
         }
 
-        while (l-- ) {
+        while ( l-- ) {
             item = items[l];
             type = item.type;
             if ( type === 'text/html' ) {
