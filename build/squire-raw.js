@@ -3990,7 +3990,10 @@ var addLinks = function ( frag, root, self ) {
             } else if ( email ) {
                 href = 'mailto:' + email;
             } else if ( networkPath ) {
-                if(self._config.linkifyNetworkPaths) {
+                if( !self._config.linkifyNetworkPaths ) { return; }
+
+                var matches = networkPath .match( /\\\\/g ) || [];
+                if( matches.length === 1 && networkPath.indexOf( '\\\\' ) === 0 ) {
                     href = 'file:' + networkPath;
                 } else {
                     return;
