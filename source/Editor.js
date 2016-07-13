@@ -1601,6 +1601,7 @@ proto.insertImage = function ( src, attributes ) {
     return img;
 };
 
+var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)|(\B\\{2}\S+)/i;
 
 var addLinks = function ( frag, root, self ) {
     var doc = frag.ownerDocument,
@@ -1613,8 +1614,7 @@ var addLinks = function ( frag, root, self ) {
     while ( node = walker.nextNode() ) {
         data = node.data;
         parent = node.parentNode;
-
-        while ( match = linkRegExp.exec( data )) {
+        while ( match = linkRegExp.exec( data ) ) {
             index = match.index;
             endIndex = index + match[0].length;
             if ( index ) {
@@ -1627,7 +1627,7 @@ var addLinks = function ( frag, root, self ) {
             var email = match[2];
             var networkPath = match[3];
 
-            if (link){
+            if ( link ){
                 if ( /^(?:ht|f)tps?:/.test( link )) {
                    href = link;
                 }
