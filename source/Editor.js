@@ -1636,8 +1636,12 @@ var addLinks = function ( frag, root, self ) {
                 }
             } else if ( email ) {
                 href = 'mailto:' + email;
-            } else if ( self._config.linkifyNetworkPaths && networkPath ) {
-                href = 'file:' + networkPath;
+            } else if ( networkPath ) {
+                if(self._config.linkifyNetworkPaths) {
+                    href = 'file:' + networkPath;
+                } else {
+                    return;
+                }
             }
 
             child = self.createElement( 'A', mergeObjects({
