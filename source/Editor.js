@@ -173,7 +173,8 @@ proto.setConfig = function ( config ) {
         undo: {
             documentSizeThreshold: -1, // -1 means no threshold
             undoLimit: -1 // -1 means no limit
-        }
+        },
+        linkifyNetworkPaths: false // Network paths such as \\directory
     }, config );
 
     // Users may specify block tag in lower case
@@ -1600,7 +1601,7 @@ proto.insertImage = function ( src, attributes ) {
     return img;
 };
 
-var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)/i;
+var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)|(\B\\{2}.+|\bfile:(?:(?:\/\/)|(?:\\{2}))\S+)/i;
 
 var addLinks = function ( frag, root, self ) {
     var doc = frag.ownerDocument,
@@ -1620,13 +1621,41 @@ var addLinks = function ( frag, root, self ) {
                 child = doc.createTextNode( data.slice( 0, index ) );
                 parent.insertBefore( child, node );
             }
+
+            var href;
+            var link = match[1];
+            var email = match[2];
+            var networkPath = match[3];
+
+            if ( link ){
+                if ( /^(?:ht|f)tps?:/.test( link )) {
+                   href = link;
+                }
+                else {
+                    href = 'http://' + link;
+                }
+            } else if ( email ) {
+                href = 'mailto:' + email;
+            } else if ( networkPath ) {
+                if( !self._config.linkifyNetworkPaths ) { return; }
+
+                var matches = networkPath.match( /\\\\|file:\/\//g ) || [];
+                var hasProtocol = /^file:\/\//i.test( networkPath )
+                if( matches.length === 1 && ( /^\\{2}/i.test( networkPath ) || hasProtocol )) {
+                    if( hasProtocol ) {
+                        href = networkPath;
+                    } else {
+                        href = 'file:' + networkPath;
+                    }
+                } else {
+                    return;
+                }
+            }
+
             child = self.createElement( 'A', mergeObjects({
-                href: match[1] ?
-                    /^(?:ht|f)tps?:/.test( match[1] ) ?
-                        match[1] :
-                        'http://' + match[1] :
-                    'mailto:' + match[2]
+                href: href
             }, defaultAttributes ));
+
             child.textContent = data.slice( index, endIndex );
             parent.insertBefore( child, node );
             node.data = data = data.slice( endIndex );
