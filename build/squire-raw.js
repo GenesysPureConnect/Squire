@@ -3954,7 +3954,7 @@ proto.insertImage = function ( src, attributes ) {
     return img;
 };
 
-var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)|(\B\\{2}\w\S+|\bfile:(?:(?:\/\/)|(?:\\{2}))\S+)/i;
+var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)|(\B\\{2}\S+|\bfile:(?:(?:\/\/)|(?:\\{2}))\S+)/i;
 
 var addLinks = function ( frag, root, self ) {
     var doc = frag.ownerDocument,
@@ -3992,7 +3992,7 @@ var addLinks = function ( frag, root, self ) {
             } else if ( networkPath ) {
                 if( !self._config.linkifyNetworkPaths ) { return; }
 
-                var matches = networkPath .match( /\\\\|file:\/\//g ) || [];
+                var matches = networkPath.match( /\\\\|file:\/\//g ) || [];
                 var hasProtocol = /^file:\/\//i.test( networkPath )
                 if( matches.length === 1 && ( /^\\{2}/i.test( networkPath ) || hasProtocol )) {
                     if( hasProtocol ) {
