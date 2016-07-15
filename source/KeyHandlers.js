@@ -70,6 +70,19 @@ var onKey = function ( event ) {
     }
 };
 
+var onKeyup =  function () {
+    var range = this.getSelection();
+    var nearestNode = getNearest( range.startContainer, this._root, 'A' );
+    var match;
+
+    if ( nearestNode ) {
+        // Update the href value according to the new link text if it is still a valid link 
+        if ( match = linkRegExp.exec( nearestNode.text ) ) {
+            nearestNode.href = getHref(match);
+        }
+    }
+};
+
 var mapKeyTo = function ( method ) {
     return function ( self, event ) {
         event.preventDefault();
@@ -245,6 +258,7 @@ var keyHandlers = {
     },
     backspace: function ( self, event, range ) {
         var root = self._root;
+        var linkNode = null;
         self._removeZWS();
         // Record undo checkpoint.
         self.saveUndoState( range );
@@ -301,6 +315,16 @@ var keyHandlers = {
                 self.setSelection( range );
                 self._updatePath( range, true );
             }
+        }
+        // If it is at the end of a link element, allow backspace to change link to text.
+        else if ( ( linkNode = getNearest( range.startContainer, root, 'A' ) ) && range.startOffset === range.startContainer.length ) {
+            event.preventDefault();
+            removeLink(linkNode);
+        }
+        // If it is a space right after a link element, allow backspace to change link to text.
+        else if ( ( linkNode = range.startContainer.previousSibling ) && linkNode.tagName === 'A' && range.startContainer.data.length === 1 && /\s/.test(range.startContainer.data)) {
+            event.preventDefault();
+            removeLink(linkNode);
         }
         // Otherwise, leave to browser but check afterwards whether it has
         // left behind an empty inline tag.
