@@ -79,7 +79,7 @@ var onKeyup =  function () {
         // Update the href value according to the new link text if it is still a valid link 
         match = linkRegExp.exec( nearestNode.text );
         if ( match ) {
-            nearestNode.href = getHref(match);
+            nearestNode.href = getHref( match );
         }
     }
 };
@@ -259,7 +259,6 @@ var keyHandlers = {
     },
     backspace: function ( self, event, range ) {
         var root = self._root;
-        var linkNode = null;
         self._removeZWS();
         // Record undo checkpoint.
         self.saveUndoState( range );
@@ -320,12 +319,12 @@ var keyHandlers = {
         // If it is at the end of a link element, allow backspace to change link to text.
         else if ( getNearest( range.startContainer, root, 'A' )  && range.startOffset === range.startContainer.length ) {
             event.preventDefault();
-            removeLink(getNearest( range.startContainer, root, 'A' ) );
+            removeLink( getNearest( range.startContainer, root, 'A' ) );
         }
         // If it is a space right after a link element, allow backspace to change link to text.
-        else if ( range.startContainer.previousSibling && range.startContainer.previousSibling.tagName === 'A' && range.startContainer.data.length === 1 && /\s/.test(range.startContainer.data)) {
+        else if ( range.startContainer.previousSibling && range.startContainer.previousSibling.tagName === 'A' && range.startContainer.data.length === 1 && /\s/.test( range.startContainer.data ) ) {
             event.preventDefault();
-            removeLink(range.startContainer.previousSibling);
+            removeLink( range.startContainer.previousSibling );
         }
         // Otherwise, leave to browser but check afterwards whether it has
         // left behind an empty inline tag.
