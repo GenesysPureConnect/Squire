@@ -1304,7 +1304,8 @@ var onKeyup =  function () {
 
     if ( nearestNode ) {
         // Update the href value according to the new link text if it is still a valid link 
-        if ( match = linkRegExp.exec( nearestNode.text ) ) {
+        match = linkRegExp.exec( nearestNode.text );
+        if ( match ) {
             nearestNode.href = getHref(match);
         }
     }
@@ -1544,14 +1545,14 @@ var keyHandlers = {
             }
         }
         // If it is at the end of a link element, allow backspace to change link to text.
-        else if ( ( linkNode = getNearest( range.startContainer, root, 'A' ) ) && range.startOffset === range.startContainer.length ) {
+        else if ( getNearest( range.startContainer, root, 'A' )  && range.startOffset === range.startContainer.length ) {
             event.preventDefault();
-            removeLink(linkNode);
+            removeLink(getNearest( range.startContainer, root, 'A' ) );
         }
         // If it is a space right after a link element, allow backspace to change link to text.
-        else if ( ( linkNode = range.startContainer.previousSibling ) && linkNode.tagName === 'A' && range.startContainer.data.length === 1 && /\s/.test(range.startContainer.data)) {
+        else if ( range.startContainer.previousSibling && range.startContainer.previousSibling.tagName === 'A' && range.startContainer.data.length === 1 && /\s/.test(range.startContainer.data)) {
             event.preventDefault();
-            removeLink(linkNode);
+            removeLink(range.startContainer.previousSibling);
         }
         // Otherwise, leave to browser but check afterwards whether it has
         // left behind an empty inline tag.
@@ -4052,8 +4053,8 @@ var addLinks = function ( frag, root, self ) {
 var removeLink = function(linkNode) {
     var parent = linkNode.parentNode;
     var children = linkNode.childNodes;
-    var i, l, child;
-    for ( i = 0, l = children.length; i < l; i += 1 ) {
+    var child;
+    for ( var i = 0; i < children.length; i++ ) {
         child = children[i];
         parent.insertBefore( child, linkNode );
     }

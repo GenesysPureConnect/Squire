@@ -1675,8 +1675,8 @@ var addLinks = function ( frag, root, self ) {
 var removeLink = function(linkNode) {
     var parent = linkNode.parentNode;
     var children = linkNode.childNodes;
-    var i, l, child;
-    for ( i = 0, l = children.length; i < l; i += 1 ) {
+    var child;
+    for ( var i = 0; i < children.length; i++ ) {
         child = children[i];
         parent.insertBefore( child, linkNode );
     }
