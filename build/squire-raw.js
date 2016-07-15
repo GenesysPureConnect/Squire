@@ -4035,8 +4035,8 @@ var addLinks = function ( frag, root, self ) {
                 parent.insertBefore( child, node );
             }
 
-            url = getHref(match);
-            if (url) {
+            url = getHref( match );
+            if ( url ) {
                 child = self.createElement( 'A', mergeObjects({
                     href: url
                 }, defaultAttributes ));
