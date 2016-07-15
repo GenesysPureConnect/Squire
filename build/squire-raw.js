@@ -2552,7 +2552,8 @@ proto.setConfig = function ( config ) {
         undo: {
             documentSizeThreshold: -1, // -1 means no threshold
             undoLimit: -1 // -1 means no limit
-        }
+        },
+        linkifyNetworkPaths: false // Network paths such as \\directory
     }, config );
 
     // Users may specify block tag in lower case
@@ -3979,7 +3980,7 @@ proto.insertImage = function ( src, attributes ) {
     return img;
 };
 
-var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)/i;
+var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)|(\B\\{2}.+|\bfile:(?:(?:\/\/)|(?:\\{2}))\S+)/i;
 
 var getHref = function(match) {
     var href;
@@ -4022,7 +4023,7 @@ var addLinks = function ( frag, root, self ) {
             return !getNearest( node, root, 'A' );
         }, false ),
         defaultAttributes = self._config.tagAttributes.a,
-        node, data, parent, match, index, endIndex, child;
+        node, data, parent, match, index, endIndex, child, url;
     while ( node = walker.nextNode() ) {
         data = node.data;
         parent = node.parentNode;
@@ -4033,11 +4034,16 @@ var addLinks = function ( frag, root, self ) {
                 child = doc.createTextNode( data.slice( 0, index ) );
                 parent.insertBefore( child, node );
             }
-            child = self.createElement( 'A', mergeObjects({
-                href: getHref(match)
-            }, defaultAttributes ));
-            child.textContent = data.slice( index, endIndex );
-            parent.insertBefore( child, node );
+
+            url = getHref(match);
+            if (url) {
+                child = self.createElement( 'A', mergeObjects({
+                    href: url
+                }, defaultAttributes ));
+
+                child.textContent = data.slice( index, endIndex );
+                parent.insertBefore( child, node );
+            }
             node.data = data = data.slice( endIndex );
         }
     }
