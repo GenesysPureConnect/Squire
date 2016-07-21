@@ -72,6 +72,18 @@ var onKey = function ( event ) {
 
 var onKeyup =  function () {
     var range = this.getSelection();
+
+    // Find block-level ancestor of selection
+    var block = range.commonAncestorContainer;
+    while ( isInline( block ) ) {
+        block = block.parentNode;
+    }
+    if ( block === this._root.children[0] ) {
+        var firstLineText = block.textContent.replace( new RegExp( ZWS, 'g' ), '' );
+        if ( firstLineText.length === 1 ) {
+            this._removeZWS();
+        }
+    }
     var nearestNode = getNearest( range.startContainer, this._root, 'A' );
     var match;
 
