@@ -2195,6 +2195,14 @@ var onPaste = function ( event ) {
         event.preventDefault();
         l = items.length;
 
+        // chromium doesn't support pasting lists of file attachments, and istead will fire a paste
+        // event with an empty list of items.  The contents of this paste event aren't really useful,
+        // but the knowledge that it happend can be.
+        if ( l === 0 ) {
+            this.fireEvent( 'willPaste', {} );
+            return;
+        }
+
         // Trigger a willPaste event if there is an image type on the clipboardData.
         for ( var i = items.length - 1; i >= 0; i-- ) {
             if ( /^image\/.*/.test( items[i].type ) ) {
