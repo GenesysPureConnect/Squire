@@ -86,7 +86,7 @@ var onPaste = function ( event ) {
         // chromium doesn't support pasting lists of file attachments, and istead will fire a paste
         // event with an empty list of items.  The contents of this paste event aren't really useful,
         // but the knowledge that it happend can be.
-        if (l === 0) {
+        if ( l === 0 ) {
             this.fireEvent( 'willPaste', {} );
             return;
         }
