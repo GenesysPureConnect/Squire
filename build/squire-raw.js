@@ -1306,7 +1306,13 @@ var onKeyup =  function () {
         // Update the href value according to the new link text if it is still a valid link 
         match = linkRegExp.exec( nearestNode.text );
         if ( match ) {
-            nearestNode.href = getHref( match );
+            var url = getHref( match, this );
+            if ( url ) {
+                nearestNode.href = url;
+            }
+            else {
+                return;
+            }
         }
     }
 };
@@ -4004,7 +4010,7 @@ proto.insertImage = function ( src, attributes ) {
 
 var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)|(\B\\{2}.+|\bfile:(?:(?:\/\/)|(?:\\{2}))\S+)/i;
 
-var getHref = function( match ) {
+var getHref = function( match, self ) {
     var href;
     var link = match[1];
     var email = match[2];
@@ -4057,7 +4063,7 @@ var addLinks = function ( frag, root, self ) {
                 parent.insertBefore( child, node );
             }
 
-            url = getHref( match );
+            url = getHref( match, self );
             if ( url ) {
                 child = self.createElement( 'A', mergeObjects({
                     href: url
@@ -4065,6 +4071,9 @@ var addLinks = function ( frag, root, self ) {
 
                 child.textContent = data.slice( index, endIndex );
                 parent.insertBefore( child, node );
+            }
+            else {
+                return;
             }
             node.data = data = data.slice( endIndex );
         }

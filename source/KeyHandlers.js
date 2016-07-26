@@ -79,7 +79,13 @@ var onKeyup =  function () {
         // Update the href value according to the new link text if it is still a valid link 
         match = linkRegExp.exec( nearestNode.text );
         if ( match ) {
-            nearestNode.href = getHref( match );
+            var url = getHref( match, this );
+            if ( url ) {
+                nearestNode.href = url;
+            }
+            else {
+                return;
+            }
         }
     }
 };
