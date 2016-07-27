@@ -1680,11 +1680,11 @@ var addLinks = function ( frag, root, self ) {
 
                 child.textContent = data.slice( index, endIndex );
                 parent.insertBefore( child, node );
+                node.data = data = data.slice( endIndex );
             }
             else {
                 return;
-            }
-            node.data = data = data.slice( endIndex );
+            }            
         }
     }
 };

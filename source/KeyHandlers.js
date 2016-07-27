@@ -83,9 +83,6 @@ var onKeyup =  function () {
             if ( url ) {
                 nearestNode.href = url;
             }
-            else {
-                return;
-            }
         }
     }
 };
