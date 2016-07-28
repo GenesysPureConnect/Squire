@@ -1680,10 +1680,12 @@ var addLinks = function ( frag, root, self ) {
 
                 child.textContent = data.slice( index, endIndex );
                 parent.insertBefore( child, node );
+                // add link for the valid url and move to the rest data
                 node.data = data = data.slice( endIndex );
             }
             else {
-                return;
+                // keep the text without adding link for it an move to the rest data
+                data = data = data.slice( endIndex );
             }            
         }
     }
