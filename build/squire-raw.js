@@ -1310,9 +1310,6 @@ var onKeyup =  function () {
             if ( url ) {
                 nearestNode.href = url;
             }
-            else {
-                return;
-            }
         }
     }
 };
@@ -4008,7 +4005,7 @@ proto.insertImage = function ( src, attributes ) {
     return img;
 };
 
-var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)|(\B\\{2}.+|\bfile:(?:(?:\/\/)|(?:\\{2}))\S+)/i;
+var linkRegExp = /\b((?:(?:ht|f)tps?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,}\/)(?:[^\s()<>]+|\([^\s()<>]+\))+(?:\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))|([\w\-.%+]+@(?:[\w\-]+\.)+[A-Z]{2,}\b)|(\B\\{2}\S+|\bfile:(?:(?:\/\/)|(?:\\{2}))\S+)/i;
 
 var getHref = function( match, self ) {
     var href;
@@ -4073,9 +4070,11 @@ var addLinks = function ( frag, root, self ) {
                 parent.insertBefore( child, node );
             }
             else {
-                return;
+                // keep the text without adding link
+                child = doc.createTextNode( data.slice( index, endIndex ) );
+                parent.insertBefore( child, node );
             }
-            node.data = data = data.slice( endIndex );
+            node.data = data = data.slice( endIndex );          
         }
     }
 };
