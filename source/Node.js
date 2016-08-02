@@ -70,7 +70,8 @@ function hasTagAttributes ( node, tag, attributes ) {
         return false;
     }
     for ( var attr in attributes ) {
-        if ( node.getAttribute( attr ) !== attributes[ attr ] ) {
+        if ( node.getAttribute( attr ) !== attributes[ attr ] &&
+                node.style[ attr ] !== attributes[ attr ] ) {
             return false;
         }
     }

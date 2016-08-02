@@ -247,7 +247,8 @@ function hasTagAttributes ( node, tag, attributes ) {
         return false;
     }
     for ( var attr in attributes ) {
-        if ( node.getAttribute( attr ) !== attributes[ attr ] ) {
+        if ( node.getAttribute( attr ) !== attributes[ attr ] &&
+                node.style[ attr ] !== attributes[ attr ] ) {
             return false;
         }
     }
@@ -4074,7 +4075,7 @@ var addLinks = function ( frag, root, self ) {
                 child = doc.createTextNode( data.slice( index, endIndex ) );
                 parent.insertBefore( child, node );
             }
-            node.data = data = data.slice( endIndex );          
+            node.data = data = data.slice( endIndex );
         }
     }
 };
@@ -4267,11 +4268,15 @@ proto.removeLink = function () {
 };
 
 proto.setFontFace = function ( name ) {
+    if(name.indexOf('sans-serif') < 0) {
+        name += ', sans-serif;';
+    }
+
     this.changeFormat({
         tag: 'SPAN',
         attributes: {
             'class': 'font',
-            style: 'font-family: ' + name + ', sans-serif;'
+            style: 'font-family: ' + name
         }
     }, {
         tag: 'SPAN',
