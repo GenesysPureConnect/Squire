@@ -244,7 +244,7 @@ Queries the editor for whether a particular format is applied anywhere in the cu
 The method takes two arguments:
 
 * **tag**: The tag of the format
-* **attributes**: (optional) Any attributes the format.
+* **attributes**: (optional) Any element or style attributes.
 
 Returns `true` if any of the selection is contained within an element with the specified tag and attributes, otherwise returns `false`.
 

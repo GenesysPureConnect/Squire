@@ -1686,7 +1686,7 @@ var addLinks = function ( frag, root, self ) {
                 child = doc.createTextNode( data.slice( index, endIndex ) );
                 parent.insertBefore( child, node );
             }
-            node.data = data = data.slice( endIndex );          
+            node.data = data = data.slice( endIndex );
         }
     }
 };
@@ -1879,11 +1879,15 @@ proto.removeLink = function () {
 };
 
 proto.setFontFace = function ( name ) {
+    if(name.indexOf('sans-serif') < 0) {
+        name += ', sans-serif;';
+    }
+
     this.changeFormat({
         tag: 'SPAN',
         attributes: {
             'class': 'font',
-            style: 'font-family: ' + name + ', sans-serif;'
+            style: 'font-family: ' + name
         }
     }, {
         tag: 'SPAN',
