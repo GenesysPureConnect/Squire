@@ -127,7 +127,7 @@ var afterDelete = function ( self, range ) {
             node = parent;
             parent = node.parentNode;
         }
-        // If focussed in empty inline element
+        // If focused in empty inline element
         if ( node !== parent ) {
             // Move focus to just before empty inline(s)
             range.setStart( parent,
@@ -458,6 +458,13 @@ var keyHandlers = {
         if ( range.collapsed && parent.nodeName === 'A' &&
                 !node.nextSibling && range.endOffset === getLength( node ) ) {
             range.setStartAfter( parent );
+        }
+        // Delete the selection if not collapsed
+        else if ( !range.collapsed ) {
+            deleteContentsOfRange( range, self._root );
+            self._ensureBottomLine();
+            self.setSelection( range );
+            self._updatePath( range, true );
         }
 
         self.setSelection( range );
