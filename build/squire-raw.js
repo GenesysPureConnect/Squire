@@ -4138,7 +4138,7 @@ var addLinks = function ( frag, root, self ) {
             if ( url ) {
                 child = self.createElement( 'A', mergeObjects({
                     href: url
-                }, defaultAttributes ) );
+                }, defaultAttributes, false ) );
 
                 child.textContent = data.slice( index, endIndex );
                 parent.insertBefore( child, node );
