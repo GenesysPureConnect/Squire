@@ -266,7 +266,7 @@ var onDrop = function ( event ) {
 
     this.fireEvent( 'willDrop', dropEvent );
 
-    if ( !dropEvent.defaultPrevent && ( hasHTML || hasPlain )) {
+    if ( !dropEvent.defaultPrevented && ( hasHTML || hasPlain )) {
         var range = this.getSelection();
         this.saveUndoState();
         this.setSelection( range );
