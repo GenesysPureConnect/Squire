@@ -2536,8 +2536,6 @@ function Squire ( root, config ) {
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
     this.addEventListener( 'drop', onDrop );
 
-    this.addEventListener( 'drop', onDrop );
-
     // Opera does not fire keydown repeatedly.
     this.addEventListener( isPresto ? 'keypress' : 'keydown', onKey );
 
