@@ -179,7 +179,8 @@ proto.setConfig = function ( config ) {
             documentSizeThreshold: -1, // -1 means no threshold
             undoLimit: -1 // -1 means no limit
         },
-        linkifyNetworkPaths: false // Network paths such as \\directory
+        linkifyNetworkPaths: false, // Network paths such as \\directory
+        indentInterval: 40 // indent changes 40px when the indent more/less button is pressed
     }, config, true );
 
     // Users may specify block tag in lower case
@@ -1332,6 +1333,46 @@ proto.modifyBlocks = function ( modify, range ) {
     return this;
 };
 
+var increaseIndent = function ( frag ) {
+    var walker = getBlockWalker( frag, this._root ), 
+        node, dir, marginAttribute;
+    dir = this._doc.dir.toLowerCase();
+    marginAttribute = dir === 'rtl' ? 'marginRight' : 'marginLeft';
+    while ( node = walker.nextNode() ) {
+        var marginValue = parseInt( node.style[ marginAttribute ], 10 );
+        if ( marginValue ) {
+            marginValue += this._config.indentInterval;
+            node.style[ marginAttribute ] = marginValue + 'px';
+        }
+        else {
+            node.style[ marginAttribute ] = this._config.indentInterval + 'px';
+        }
+        // Don't shrink the text width when the div reaches the boundary of the editor because of the increased margin
+        node.style.whiteSpace = 'nowrap';
+    }
+    return frag;
+};
+
+var decreaseIndent = function ( frag ) {
+    var walker = getBlockWalker( frag, this._root ), 
+        node, dir, marginAttribute;
+    dir = this._doc.dir.toLowerCase();
+    marginAttribute = dir === 'rtl' ? 'marginRight' : 'marginLeft';
+    while ( node = walker.nextNode() ) {
+        var marginValue = parseInt( node.style[ marginAttribute ], 10 );
+        marginValue = marginValue ? marginValue - this._config.indentInterval : 0;
+        if ( marginValue > 0 ) {
+            node.style[ marginAttribute ] = marginValue + 'px';
+        }
+        else {
+            node.style[ marginAttribute ] = '';
+            // Clear the whiteSpace style we added for indent
+            node.style.whiteSpace = '';            
+        }        
+    }
+    return frag;
+};
+
 var increaseBlockQuoteLevel = function ( frag ) {
     return this.createElement( 'BLOCKQUOTE',
         this._config.tagAttributes.blockquote, [
@@ -2117,6 +2158,9 @@ proto.removeAllFormatting = function ( range ) {
 
     return this.focus();
 };
+
+proto.increaseIndent = command( 'modifyBlocks', increaseIndent );
+proto.decreaseIndent = command( 'modifyBlocks', decreaseIndent );
 
 proto.increaseQuoteLevel = command( 'modifyBlocks', increaseBlockQuoteLevel );
 proto.decreaseQuoteLevel = command( 'modifyBlocks', decreaseBlockQuoteLevel );
