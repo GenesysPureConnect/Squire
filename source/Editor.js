@@ -102,7 +102,16 @@ function Squire ( root, config ) {
     // again before our after paste function is called.
     this._awaitingPaste = false;
     this.addEventListener( isIElt11 ? 'beforecut' : 'cut', onCut );
-    this.addEventListener( 'copy', onCopy );
+    
+    /**
+    * This onCopy handler was added as an imperfect solution to
+    * https://github.com/neilj/Squire/issues/161
+    * However it is causing other issues that are more severe. see
+    * https://github.com/neilj/Squire/issues/219
+    * So we will rely on native browser copy behavior instead.
+    *
+    *   this.addEventListener( 'copy', onCopy );
+    */
     this.addEventListener( isIElt11 ? 'beforepaste' : 'paste', onPaste );
     this.addEventListener( 'drop', onDrop );
 
@@ -1334,7 +1343,7 @@ proto.modifyBlocks = function ( modify, range ) {
 };
 
 var increaseIndent = function ( frag ) {
-    var walker = getBlockWalker( frag, this._root ), 
+    var walker = getBlockWalker( frag, this._root ),
         node, dir, marginAttribute;
     dir = this._doc.dir.toLowerCase();
     marginAttribute = dir === 'rtl' ? 'marginRight' : 'marginLeft';
@@ -1354,7 +1363,7 @@ var increaseIndent = function ( frag ) {
 };
 
 var decreaseIndent = function ( frag ) {
-    var walker = getBlockWalker( frag, this._root ), 
+    var walker = getBlockWalker( frag, this._root ),
         node, dir, marginAttribute;
     dir = this._doc.dir.toLowerCase();
     marginAttribute = dir === 'rtl' ? 'marginRight' : 'marginLeft';
@@ -1367,8 +1376,8 @@ var decreaseIndent = function ( frag ) {
         else {
             node.style[ marginAttribute ] = '';
             // Clear the whiteSpace style we added for indent
-            node.style.whiteSpace = '';            
-        }        
+            node.style.whiteSpace = '';
+        }
     }
     return frag;
 };
