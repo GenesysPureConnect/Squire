@@ -55,6 +55,7 @@ var onPaste = function ( event ) {
     var clipboardData = event.clipboardData,
         items = clipboardData && clipboardData.items,
         plainItem = null,
+        rtfItem = null,
         self = this,
         l, item, type, types, data;
 
@@ -90,19 +91,20 @@ var onPaste = function ( event ) {
             this.fireEvent( 'willPaste', {} );
             return;
         }
+        
+        var imagePasteEvent = {
+            clipboardData: event.clipboardData,
+            isImage: true,
+            items: items,
+            preventDefault: function () {
+                this.defaultPrevented = true;
+            },
+            defaultPrevented: false
+        };
 
         // Trigger a willPaste event if there is an image type on the clipboardData.
         for ( var i = items.length - 1; i >= 0; i-- ) {
             if ( /^image\/.*/.test( items[i].type ) ) {
-                var imagePasteEvent = {
-                    clipboardData: event.clipboardData,
-                    isImage: true,
-                    preventDefault: function () {
-                        this.defaultPrevented = true;
-                    },
-                    defaultPrevented: false
-                };
-
                 this.fireEvent( 'willPaste', imagePasteEvent );
                 return;
             }
@@ -111,6 +113,7 @@ var onPaste = function ( event ) {
         while ( l-- ) {
             item = items[l];
             type = item.type;
+
             if ( type === 'text/html' ) {
                 /*jshint loopfunc: true */
                 item.getAsString( function ( html ) {
@@ -119,8 +122,13 @@ var onPaste = function ( event ) {
                 /*jshint loopfunc: false */
                 return;
             }
+
             if ( type === 'text/plain' ) {
                 plainItem = item;
+            }
+
+            if (type === 'text/rtf') {
+                rtfItem = item;
             }
         }
 
@@ -129,6 +137,15 @@ var onPaste = function ( event ) {
                 self.insertPlainText( text, true );
             });
         }
+
+        if ( rtfItem ) {
+            item.getAsString(function ( text ) {
+                if ( !text ) {
+                    this.fireEvent.call(this, 'willPaste', imagePasteEvent );
+                }
+            }.bind(this));
+        }
+
         return;
     }
 
