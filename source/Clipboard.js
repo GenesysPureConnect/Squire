@@ -127,7 +127,7 @@ var onPaste = function ( event ) {
                 plainItem = item;
             }
 
-            if (type === 'text/rtf') {
+            if ( type === 'text/rtf' ) {
                 rtfItem = item;
             }
         }
@@ -139,11 +139,13 @@ var onPaste = function ( event ) {
         }
 
         if ( rtfItem ) {
-            item.getAsString(function ( text ) {
+            item.getAsString( function ( text ) {
                 if ( !text ) {
-                    this.fireEvent.call(this, 'willPaste', imagePasteEvent );
+                    // RTF items without text may contain OLE embedded image data.
+                    // Firing willPaste to notify consumers an image may have been pasted.
+                    this.fireEvent.call( this, 'willPaste', imagePasteEvent );
                 }
-            }.bind(this));
+            }.bind( this ));
         }
 
         return;
