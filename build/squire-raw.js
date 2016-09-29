@@ -3947,7 +3947,7 @@ var increaseListLevel = function ( frag ) {
             clone = item.cloneNode( true );
             // Create a new list level with the clone node to replace the previous one
             newChild = this.createElement( type, listAttrs, [ clone ] );
-            replaceWith(item, newChild);
+            replaceWith( item, newChild );
         }
     }
     return frag;
