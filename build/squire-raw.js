@@ -3934,28 +3934,20 @@ var removeList = function ( frag ) {
 
 var increaseListLevel = function ( frag ) {
     var items = frag.querySelectorAll( 'LI' ),
-        i, l, item,
-        type, newParent,
+        i, l, item, clone,
+        type, newChild,
         tagAttributes = this._config.tagAttributes,
-        listItemAttrs = tagAttributes.li,
         listAttrs;
     for ( i = 0, l = items.length; i < l; i += 1 ) {
         item = items[i];
         if ( !isContainer( item.firstChild ) ) {
             // type => 'UL' or 'OL'
             type = item.parentNode.nodeName;
-            newParent = item.previousSibling;
-            if ( !newParent || !( newParent = newParent.lastChild ) ||
-                    newParent.nodeName !== type ) {
-                listAttrs = tagAttributes[ type.toLowerCase() ];
-                replaceWith(
-                    item,
-                    this.createElement( 'LI', listItemAttrs, [
-                        newParent = this.createElement( type, listAttrs )
-                    ])
-                );
-            }
-            newParent.appendChild( item );
+            listAttrs = tagAttributes[ type.toLowerCase() ];
+            clone = item.cloneNode( true );
+            // Create a new list level with the clone node to replace the previous one
+            newChild = this.createElement( type, listAttrs, [ clone ] );
+            replaceWith( item, newChild );
         }
     }
     return frag;
@@ -3975,17 +3967,26 @@ var decreaseListLevel = function ( frag ) {
         if ( item.previousSibling ) {
             parent = split( parent, item, newParent, root );
         }
-        while ( node ) {
-            next = node.nextSibling;
-            if ( isContainer( node ) ) {
-                break;
+        
+        if ( newParent.nodeName === parent.nodeName ) {
+            // If it is nested list, move the node one level up.
+            newParent.insertBefore( item, parent );
+        }
+        else {
+            while ( node ) {
+                next = node.nextSibling;
+                if ( isContainer( node ) ) {
+                    break;
+                }
+                newParent.insertBefore( node, parent );
+                node = next;
             }
-            newParent.insertBefore( node, parent );
-            node = next;
+
+            if ( newParent.nodeName === 'LI' && first.previousSibling ) {
+                split( newParent, first, newParent.parentNode, root );
+            }
         }
-        if ( newParent.nodeName === 'LI' && first.previousSibling ) {
-            split( newParent, first, newParent.parentNode, root );
-        }
+
         while ( item !== frag && !item.childNodes.length ) {
             parent = item.parentNode;
             parent.removeChild( item );
