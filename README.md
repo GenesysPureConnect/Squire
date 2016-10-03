@@ -89,6 +89,7 @@ Attach an event listener to the editor. The handler can be either a function or 
 * **focus**: The editor gained focus.
 * **blur**: The editor lost focus
 * **keydown**: Standard [DOM keydown event](https://developer.mozilla.org/en-US/docs/Web/Events/keydown).
+* **postKeyDown**: Fired immediately following a keydown event, after Squire has manipulated the DOM but prior to the key being inserted into the document. This can be especially useful if you need to manipulate the DOM after Squire has deleted a range of existing content.
 * **keypress**: Standard [DOM keypress event](https://developer.mozilla.org/en-US/docs/Web/Events/keypress).
 * **keyup**: Standard [DOM keyup event](https://developer.mozilla.org/en-US/docs/Web/Events/keyup).
 * **input**: The user inserted, deleted or changed the style of some text; in other words, the result for `editor.getHTML()` will have changed.
