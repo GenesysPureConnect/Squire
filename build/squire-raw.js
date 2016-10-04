@@ -3932,14 +3932,10 @@ var removeList = function ( frag ) {
     return frag;
 };
 
-var orderedListStypeTypes = ['decimal', 'lower-latin', 'lower-roman'];
-var unorderedListStypeTypes = ['disc', 'circle', 'square'];
-
 var increaseListLevel = function ( frag ) {
     var items = frag.querySelectorAll( 'LI' ),
         i, l, item, clone,
         type, newChild,
-        listStyleTypes, parentNodeListStypeTypeIndex, 
         tagAttributes = this._config.tagAttributes,
         listAttrs;
     for ( i = 0, l = items.length; i < l; i += 1 ) {
@@ -3952,13 +3948,6 @@ var increaseListLevel = function ( frag ) {
             // Create a new list level with the clone node to replace the previous one
             newChild = this.createElement( type, listAttrs, [ clone ] );
             replaceWith( item, newChild );
-            // Set the list styple type for the child node to a lower level of its parent
-            listStyleTypes = ( type === 'UL' ) ? unorderedListStypeTypes : orderedListStypeTypes;
-            parentNodeListStypeTypeIndex = listStyleTypes.indexOf( newChild.parentNode.style.listStyleType );
-            if ( parentNodeListStypeTypeIndex < 0 ) {
-                parentNodeListStypeTypeIndex = 0;
-            }
-            newChild.style.listStyleType = listStyleTypes[ ( parentNodeListStypeTypeIndex + 1 ) % listStyleTypes.length ];            
         }
     }
     return frag;
