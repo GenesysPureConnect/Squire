@@ -61,11 +61,25 @@ var onPaste = function ( event ) {
 
         types = clipboardData && clipboardData.types;
 
-        // If we have files, use the  HTML5 Clipboard interface.
-        var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
+    // If we have files, use the  HTML5 Clipboard interface.
+    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
 
-        // if pasted content has html data, then use code as there is no clipboard interface
-        var hasHtml = ( types && ( indexOf.call( types, 'text/html' ) >= 0 ));
+    // if pasted content has html data, then use code as there is no clipboard interface
+    var hasHtml = ( types && ( indexOf.call( types, 'text/html' ) >= 0 ));
+
+    var beforePasteEvent = {
+        preventDefault: function () {
+            this.defaultPrevented = true;
+        },
+        defaultPrevented: false
+    }
+
+    this.fireEvent( 'beforePaste', beforePasteEvent );
+
+    if ( beforePasteEvent.defaultPrevented ) {
+        event.preventDefault();
+        return;
+    }
 
     // Current HTML5 Clipboard interface
     // ---------------------------------

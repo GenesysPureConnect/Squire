@@ -1898,18 +1898,45 @@ proto.insertPlainText = function ( plainText, isPaste ) {
     var attributes = config.blockAttributes;
     var closeBlock  = '</' + tag + '>';
     var openBlock = '<' + tag;
+    var styleAttributes = '';
     var attr, i, l, line;
+
+    var formattingAttributes = { 
+        'color': 'color',
+        'backgroundColor': 'background-color',
+        'family': 'font-family',
+        'size': 'font-size'
+    };
+
+    var formattingInfo = this.getFontInfo();
 
     for ( attr in attributes ) {
         openBlock += ' ' + attr + '="' +
             escapeHTMLFragement( attributes[ attr ] ) +
         '"';
     }
+
+    if ( isPaste ) {
+        for ( attr in formattingInfo ) {
+            if ( formattingAttributes[ attr ] && formattingInfo[ attr ] ) {
+                styleAttributes += formattingAttributes[ attr ];
+                styleAttributes += ': ';
+                styleAttributes += formattingInfo[ attr ].replace(/"/, '\\"');
+                styleAttributes += '; ';
+            }
+        }
+    }
+
     openBlock += '>';
 
     for ( i = 0, l = lines.length; i < l; i += 1 ) {
         line = lines[i];
         line = escapeHTMLFragement( line ).replace( / (?= )/g, '&nbsp;' );
+        // Add any surrounding style attributes
+        if ( isPaste && styleAttributes ) {
+            line = '<span style="' + styleAttributes + '">' + line + '</span>';
+        }
+
         // Wrap all but first/last lines in <div></div>
         if ( i && i + 1 < l ) {
             line = openBlock + ( line || '<BR>' ) + closeBlock;
