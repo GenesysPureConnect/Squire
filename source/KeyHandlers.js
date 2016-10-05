@@ -68,6 +68,8 @@ var onKey = function ( event ) {
         this.setSelection( range );
         this._updatePath( range, true );
     }
+
+    this.fireEvent( 'postKeyDown', event );
 };
 
 var onKeyup =  function () {

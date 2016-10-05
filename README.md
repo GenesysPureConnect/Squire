@@ -89,12 +89,14 @@ Attach an event listener to the editor. The handler can be either a function or 
 * **focus**: The editor gained focus.
 * **blur**: The editor lost focus
 * **keydown**: Standard [DOM keydown event](https://developer.mozilla.org/en-US/docs/Web/Events/keydown).
+* **postKeyDown**: Fired immediately following a keydown event, after Squire has manipulated the DOM but prior to the key being inserted into the document. This can be especially useful if you need to manipulate the DOM after Squire has deleted a range of existing content.
 * **keypress**: Standard [DOM keypress event](https://developer.mozilla.org/en-US/docs/Web/Events/keypress).
 * **keyup**: Standard [DOM keyup event](https://developer.mozilla.org/en-US/docs/Web/Events/keyup).
 * **input**: The user inserted, deleted or changed the style of some text; in other words, the result for `editor.getHTML()` will have changed.
 * **pathChange**: The path (see getPath documentation) to the cursor has changed. The new path is available as the `path` property on the event object.
 * **select**: The user selected some text.
 * **undoStateChange**: The availability of undo and/or redo has changed. The event object has two boolean properties, `canUndo` and `canRedo` to let you know the new state.
+* **beforePaste*: The user is pasting content into the document. This gives a consumer the option to prevent the paste operation before Squire does any processing of the paste event.
 * **willPaste**: The user is pasting content into the document. The content that will be inserted is available as the `fragment` property on the event object. You can modify this fragment in your event handler to change what will be pasted. You can also call the `preventDefault` on the event object to cancel the paste operation.
 
 The method takes two arguments:
