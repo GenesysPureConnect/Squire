@@ -2203,11 +2203,25 @@ var onPaste = function ( event ) {
 
         types = clipboardData && clipboardData.types;
 
-        // If we have files, use the  HTML5 Clipboard interface.
-        var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
+    // If we have files, use the  HTML5 Clipboard interface.
+    var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
 
-        // if pasted content has html data, then use code as there is no clipboard interface
-        var hasHtml = ( types && ( indexOf.call( types, 'text/html' ) >= 0 ));
+    // if pasted content has html data, then use code as there is no clipboard interface
+    var hasHtml = ( types && ( indexOf.call( types, 'text/html' ) >= 0 ));
+
+    var beforePasteEvent = {
+        preventDefault: function () {
+            this.defaultPrevented = true;
+        },
+        defaultPrevented: false
+    }
+
+    this.fireEvent( 'beforePaste', beforePasteEvent );
+
+    if ( beforePasteEvent.defaultPrevented ) {
+        event.preventDefault();
+        return;
+    }
 
     // Current HTML5 Clipboard interface
     // ---------------------------------
@@ -3934,10 +3948,14 @@ var removeList = function ( frag ) {
     return frag;
 };
 
+var orderedListStypeTypes = ['decimal', 'lower-latin', 'lower-roman'];
+var unorderedListStypeTypes = ['disc', 'circle', 'square'];
+
 var increaseListLevel = function ( frag ) {
     var items = frag.querySelectorAll( 'LI' ),
         i, l, item, clone,
         type, newChild,
+        listStyleTypes, parentNodeListStypeTypeIndex, 
         tagAttributes = this._config.tagAttributes,
         listAttrs;
     for ( i = 0, l = items.length; i < l; i += 1 ) {
@@ -3950,6 +3968,13 @@ var increaseListLevel = function ( frag ) {
             // Create a new list level with the clone node to replace the previous one
             newChild = this.createElement( type, listAttrs, [ clone ] );
             replaceWith( item, newChild );
+            // Set the list styple type for the child node to a lower level of its parent
+            listStyleTypes = ( type === 'UL' ) ? unorderedListStypeTypes : orderedListStypeTypes;
+            parentNodeListStypeTypeIndex = listStyleTypes.indexOf( newChild.parentNode.style.listStyleType );
+            if ( parentNodeListStypeTypeIndex < 0 ) {
+                parentNodeListStypeTypeIndex = 0;
+            }
+            newChild.style.listStyleType = listStyleTypes[ ( parentNodeListStypeTypeIndex + 1 ) % listStyleTypes.length ];            
         }
     }
     return frag;
@@ -4349,18 +4374,45 @@ proto.insertPlainText = function ( plainText, isPaste ) {
     var attributes = config.blockAttributes;
     var closeBlock  = '</' + tag + '>';
     var openBlock = '<' + tag;
+    var styleAttributes = '';
     var attr, i, l, line;
+
+    var formattingAttributes = { 
+        'color': 'color',
+        'backgroundColor': 'background-color',
+        'family': 'font-family',
+        'size': 'font-size'
+    };
+
+    var formattingInfo = this.getFontInfo();
 
     for ( attr in attributes ) {
         openBlock += ' ' + attr + '="' +
             escapeHTMLFragement( attributes[ attr ] ) +
         '"';
     }
+
+    if ( isPaste ) {
+        for ( attr in formattingInfo ) {
+            if ( formattingAttributes[ attr ] && formattingInfo[ attr ] ) {
+                styleAttributes += formattingAttributes[ attr ];
+                styleAttributes += ': ';
+                styleAttributes += formattingInfo[ attr ].replace(/"/, '\\"');
+                styleAttributes += '; ';
+            }
+        }
+    }
+
     openBlock += '>';
 
     for ( i = 0, l = lines.length; i < l; i += 1 ) {
         line = lines[i];
         line = escapeHTMLFragement( line ).replace( / (?= )/g, '&nbsp;' );
+        // Add any surrounding style attributes
+        if ( isPaste && styleAttributes ) {
+            line = '<span style="' + styleAttributes + '">' + line + '</span>';
+        }
+
         // Wrap all but first/last lines in <div></div>
         if ( i && i + 1 < l ) {
             line = openBlock + ( line || '<BR>' ) + closeBlock;
