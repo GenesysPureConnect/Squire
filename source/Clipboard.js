@@ -273,6 +273,9 @@ var onDrop = function ( event ) {
     var l = types.length;
     var hasPlain = false;
     var hasHTML = false;
+    var ownerDocument = this._root && this._root.ownerDocument;
+    var selection;
+
     while ( l-- ) {
         switch ( types[l] ) {
         case 'text/plain':
@@ -287,7 +290,17 @@ var onDrop = function ( event ) {
         }
     }
 
+    // Try our best to get the location of the insertion
+    if ( ownerDocument && ownerDocument.caretRangeFromPoint ) {
+        selection = ownerDocument.caretRangeFromPoint( event.clientX, event.clientY );
+    } else if ( ownerDocument && ownerDocument.caretPositionFromPoint ) {
+        var caretPosition = ownerDocument.caretPositionFromPoint( event.clientX, event.clientY );
+        selection = document.createRange();
+        selection.setStart( caretPosition.offsetNode, caretPosition.offset );
+    }
+
     var dropEvent = {
+        selection: selection,
         dataTransfer: event.dataTransfer,
         hasPlain: hasPlain,
         hasHTML: hasHTML,
