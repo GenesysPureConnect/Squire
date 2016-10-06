@@ -2407,8 +2407,10 @@ var onPaste = function ( event ) {
 };
 
 // On Windows and Macs you can drag an drop text. We can't handle this ourselves, because
-// as far as I can see, there's no way to get the drop insertion point. So just
-// save an undo state and hope for the best.
+// there is no reliable cross-browser way to get the location where the user dropped the
+// text. We do try to provide the selection on the willDrop event, but this doesn't
+// support all browsers and may not be reliable in all cases. So just save an undo state,
+// let the browser handle the insertion, and hope for the best.
 var onDrop = function ( event ) {
     var types = event.dataTransfer.types;
     var l = types.length;
