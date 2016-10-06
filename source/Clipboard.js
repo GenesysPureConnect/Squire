@@ -272,7 +272,6 @@ var onDrop = function ( event ) {
     var l = types.length;
     var hasPlain = false;
     var hasHTML = false;
-    var ownerDocument = this._root && this._root.ownerDocument;
     var selection;
 
     while ( l-- ) {
@@ -290,10 +289,10 @@ var onDrop = function ( event ) {
     }
 
     // Try our best to get the location of the insertion
-    if ( ownerDocument && ownerDocument.caretRangeFromPoint ) {
-        selection = ownerDocument.caretRangeFromPoint( event.clientX, event.clientY );
-    } else if ( ownerDocument && ownerDocument.caretPositionFromPoint ) {
-        var caretPosition = ownerDocument.caretPositionFromPoint( event.clientX, event.clientY );
+    if ( this._doc.caretRangeFromPoint ) {
+        selection = this._doc.caretRangeFromPoint( event.clientX, event.clientY );
+    } else if ( this._doc.caretPositionFromPoint ) {
+        var caretPosition = this._doc.caretPositionFromPoint( event.clientX, event.clientY );
         selection = document.createRange();
         selection.setStart( caretPosition.offsetNode, caretPosition.offset );
     }
