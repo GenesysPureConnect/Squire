@@ -2201,7 +2201,7 @@ var onPaste = function ( event ) {
         self = this,
         l, item, type, types, data;
 
-        types = clipboardData && clipboardData.types;
+    types = clipboardData && clipboardData.types;
 
     // If we have files, use the  HTML5 Clipboard interface.
     var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
@@ -2248,9 +2248,8 @@ var onPaste = function ( event ) {
             return;
         }
         
-        var imagePasteEvent = {
+        var pasteEvent = {
             clipboardData: event.clipboardData,
-            isImage: true,
             items: items,
             preventDefault: function () {
                 this.defaultPrevented = true;
@@ -2261,7 +2260,8 @@ var onPaste = function ( event ) {
         // Trigger a willPaste event if there is an image type on the clipboardData.
         for ( var i = items.length - 1; i >= 0; i-- ) {
             if ( /^image\/.*/.test( items[i].type ) ) {
-                this.fireEvent( 'willPaste', imagePasteEvent );
+                pasteEvent.isImage = true;
+                this.fireEvent( 'willPaste', pasteEvent );
                 return;
             }
         }
@@ -2288,20 +2288,19 @@ var onPaste = function ( event ) {
             }
         }
 
-        if ( plainItem ) {
+        if ( rtfItem ) {
+            item.getAsString( function ( text ) {
+                pasteEvent['isImage'] = !text;
+                this.fireEvent.call( this, 'willPaste', pasteEvent );
+                if ( !pasteEvent.defaultPrevented ) {
+                    self.insertPlainText( text, true );
+                }
+            }.bind( this ));
+        }
+        else if ( plainItem ) {
             item.getAsString( function ( text ) {
                 self.insertPlainText( text, true );
             });
-        }
-
-        if ( rtfItem ) {
-            item.getAsString( function ( text ) {
-                if ( !text ) {
-                    // RTF items without text may contain OLE embedded image data.
-                    // Firing willPaste to notify consumers an image may have been pasted.
-                    this.fireEvent.call( this, 'willPaste', imagePasteEvent );
-                }
-            }.bind( this ));
         }
 
         return;
