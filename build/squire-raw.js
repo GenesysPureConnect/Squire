@@ -2407,13 +2407,17 @@ var onPaste = function ( event ) {
 };
 
 // On Windows and Macs you can drag an drop text. We can't handle this ourselves, because
-// as far as I can see, there's no way to get the drop insertion point. So just
-// save an undo state and hope for the best.
+// there is no reliable cross-browser way to get the location where the user dropped the
+// text. We do try to provide the selection on the willDrop event, but this doesn't
+// support all browsers and may not be reliable in all cases. So just save an undo state,
+// let the browser handle the insertion, and hope for the best.
 var onDrop = function ( event ) {
     var types = event.dataTransfer.types;
     var l = types.length;
     var hasPlain = false;
     var hasHTML = false;
+    var selection;
+
     while ( l-- ) {
         switch ( types[l] ) {
         case 'text/plain':
@@ -2428,7 +2432,17 @@ var onDrop = function ( event ) {
         }
     }
 
+    // Try our best to get the location of the insertion
+    if ( this._doc.caretRangeFromPoint ) {
+        selection = this._doc.caretRangeFromPoint( event.clientX, event.clientY );
+    } else if ( this._doc.caretPositionFromPoint ) {
+        var caretPosition = this._doc.caretPositionFromPoint( event.clientX, event.clientY );
+        selection = document.createRange();
+        selection.setStart( caretPosition.offsetNode, caretPosition.offset );
+    }
+
     var dropEvent = {
+        selection: selection,
         dataTransfer: event.dataTransfer,
         hasPlain: hasPlain,
         hasHTML: hasHTML,
