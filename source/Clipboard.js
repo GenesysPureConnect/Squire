@@ -118,7 +118,7 @@ var onPaste = function ( event ) {
         // Trigger a willPaste event if there is an image type on the clipboardData.
         for ( var i = items.length - 1; i >= 0; i-- ) {
             if ( /^image\/.*/.test( items[i].type ) ) {
-                pasteEvent['isImage'] = true;
+                pasteEvent.isImage = true;
                 this.fireEvent( 'willPaste', pasteEvent );
                 return;
             }
