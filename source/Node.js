@@ -298,6 +298,28 @@ function fixContainer ( container, root ) {
                  wrapper = createElement( doc,
                     config.blockTag, config.blockAttributes );
             }
+            // Replace the align attribute in IMG tag by style
+            if ( child.nodeName === 'IMG' ) {
+                var dir, defaultAlignment, alignment;
+
+                dir = doc.dir.toLowerCase();
+                defaultAlignment = dir === 'rtl' ? 'right' : 'left';
+                if ( child.align ) {
+                    alignment = child.align;
+                    child.removeAttribute( 'align' );
+                } else {
+                    alignment = defaultAlignment;
+                }
+                
+                wrapper.className = ( wrapper.className
+                    .split( /\s+/ )
+                    .filter( function ( klass ) {
+                        return !( /align/.test( klass ) );
+                    })
+                    .join( ' ' ) +
+                    ' align-' + alignment ).trim();
+                wrapper.style.textAlign = alignment;
+            }
             wrapper.appendChild( child );
             i -= 1;
             l -= 1;
