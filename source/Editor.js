@@ -1631,6 +1631,19 @@ function _addAlignClassName ( className, alignment ) {
         ' align-' + alignment ).trim();
 }
 
+function _getAlignment ( node, dir ) {
+    var defaultAlignment, alignment;
+    defaultAlignment = dir === 'rtl' ? 'right' : 'left';
+    if ( node.align ) {
+        alignment = node.align;
+        node.removeAttribute( 'align' );
+    }
+    else {
+        alignment = defaultAlignment ;
+    }
+    return alignment;
+}
+
 proto.setHTML = function ( html ) {
     var frag = this._doc.createDocumentFragment();
     var div = this.createElement( 'DIV' );
@@ -1651,17 +1664,10 @@ proto.setHTML = function ( html ) {
     while ( node = getNextBlock( node, root ) ) {
         // Replace the align attribute in P tag by style
         if ( node.tagName.toUpperCase() === 'P' ) {
-            var dir, defaultAlignment, alignment;
+            var dir, alignment;
 
             dir = this._doc.dir.toLowerCase();
-            defaultAlignment = dir === 'rtl' ? 'right' : 'left';
-            if ( node.align ) {
-                alignment = node.align;
-                node.removeAttribute( 'align' );
-            }
-            else {
-                alignment = defaultAlignment ;
-            }
+            alignment = _getAlignment( node, dir );
 
             node.className = _addAlignClassName( node.className, alignment );
             node.style.textAlign = alignment;

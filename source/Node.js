@@ -300,24 +300,12 @@ function fixContainer ( container, root ) {
             }
             // Replace the align attribute in IMG tag by style
             if ( child.nodeName === 'IMG' ) {
-                var dir, defaultAlignment, alignment;
+                var dir, alignment;
 
                 dir = doc.dir.toLowerCase();
-                defaultAlignment = dir === 'rtl' ? 'right' : 'left';
-                if ( child.align ) {
-                    alignment = child.align;
-                    child.removeAttribute( 'align' );
-                } else {
-                    alignment = defaultAlignment;
-                }
+                alignment = _getAlignment( child, dir );
                 
-                wrapper.className = ( wrapper.className
-                    .split( /\s+/ )
-                    .filter( function ( klass ) {
-                        return !( /align/.test( klass ) );
-                    })
-                    .join( ' ' ) +
-                    ' align-' + alignment ).trim();
+                wrapper.className = _addAlignClassName( wrapper.className, alignment );
                 wrapper.style.textAlign = alignment;
             }
             wrapper.appendChild( child );
