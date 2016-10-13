@@ -1415,7 +1415,7 @@ var removeBlockQuote = function (/* frag */) {
 
 var makeList = function ( self, frag, type ) {
     var walker = getBlockWalker( frag, self._root ),
-        node, tag, prev, newLi,
+        node, tag, prev, newLi, attr, child,
         tagAttributes = self._config.tagAttributes,
         listAttrs = tagAttributes[ type.toLowerCase() ],
         listItemAttrs = tagAttributes.li;
@@ -1442,7 +1442,22 @@ var makeList = function ( self, frag, type ) {
                     ])
                 );
             }
-            newLi.appendChild( node );
+            
+            // Use the same attribues and children of the node for the new LI element 
+            if ( node.attributes ) {
+                for ( var i = 0; i < node.attributes.length; i++ ) {
+                    attr = node.attributes[ i ];
+                    if ( attr !== undefined ) {
+                        newLi.setAttribute( attr.name, attr.value );
+                    }
+                }
+            }
+            for ( var i = 0; i < node.childNodes.length; i++ ) {
+                child = node.childNodes[ i ];
+                if ( isInline( child ) ) {
+                    newLi.appendChild( child.cloneNode( true ) );
+                }
+            }
         } else {
             node = node.parentNode.parentNode;
             tag = node.nodeName;
