@@ -300,10 +300,13 @@ function fixContainer ( container, root ) {
             }
             // Replace the align attribute in IMG tag by style
             if ( child.nodeName === 'IMG' ) {
-                if ( alignment ) { 
-                    wrapper.className = _addAlignClassName( wrapper.className, alignment );
-                    wrapper.style.textAlign = alignment;
-                }
+                var dir, alignment;
+
+                dir = doc.dir.toLowerCase();
+                alignment = _getAlignment( child, dir );
+                
+                wrapper.className = _addAlignClassName( wrapper.className, alignment );
+                wrapper.style.textAlign = alignment;
             }
             wrapper.appendChild( child );
             i -= 1;
