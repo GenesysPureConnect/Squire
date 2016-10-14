@@ -478,6 +478,14 @@ function fixContainer ( container, root ) {
                  wrapper = createElement( doc,
                     config.blockTag, config.blockAttributes );
             }
+            // Replace the align attribute in IMG tag by style
+            if ( child.nodeName === 'IMG' ) {
+                var alignment = _getAlignment( child );
+                if ( alignment ) {
+                    wrapper.className = _addAlignClassName( wrapper.className, alignment );
+                    wrapper.style.textAlign = alignment;
+                }
+            }
             wrapper.appendChild( child );
             i -= 1;
             l -= 1;
@@ -2201,7 +2209,7 @@ var onPaste = function ( event ) {
         self = this,
         l, item, type, types, data;
 
-        types = clipboardData && clipboardData.types;
+    types = clipboardData && clipboardData.types;
 
     // If we have files, use the  HTML5 Clipboard interface.
     var hasFiles = ( types && ( indexOf.call( types, 'Files' ) >= 0 ));
@@ -2248,9 +2256,8 @@ var onPaste = function ( event ) {
             return;
         }
         
-        var imagePasteEvent = {
+        var pasteEvent = {
             clipboardData: event.clipboardData,
-            isImage: true,
             items: items,
             preventDefault: function () {
                 this.defaultPrevented = true;
@@ -2261,7 +2268,8 @@ var onPaste = function ( event ) {
         // Trigger a willPaste event if there is an image type on the clipboardData.
         for ( var i = items.length - 1; i >= 0; i-- ) {
             if ( /^image\/.*/.test( items[i].type ) ) {
-                this.fireEvent( 'willPaste', imagePasteEvent );
+                pasteEvent.isImage = true;
+                this.fireEvent( 'willPaste', pasteEvent );
                 return;
             }
         }
@@ -2288,20 +2296,19 @@ var onPaste = function ( event ) {
             }
         }
 
-        if ( plainItem ) {
+        if ( rtfItem ) {
+            item.getAsString( function ( text ) {
+                pasteEvent['isImage'] = !text;
+                this.fireEvent.call( this, 'willPaste', pasteEvent );
+                if ( !pasteEvent.defaultPrevented ) {
+                    self.insertPlainText( text, true );
+                }
+            }.bind( this ));
+        }
+        else if ( plainItem ) {
             item.getAsString( function ( text ) {
                 self.insertPlainText( text, true );
             });
-        }
-
-        if ( rtfItem ) {
-            item.getAsString( function ( text ) {
-                if ( !text ) {
-                    // RTF items without text may contain OLE embedded image data.
-                    // Firing willPaste to notify consumers an image may have been pasted.
-                    this.fireEvent.call( this, 'willPaste', imagePasteEvent );
-                }
-            }.bind( this ));
         }
 
         return;
@@ -2408,13 +2415,17 @@ var onPaste = function ( event ) {
 };
 
 // On Windows and Macs you can drag an drop text. We can't handle this ourselves, because
-// as far as I can see, there's no way to get the drop insertion point. So just
-// save an undo state and hope for the best.
+// there is no reliable cross-browser way to get the location where the user dropped the
+// text. We do try to provide the selection on the willDrop event, but this doesn't
+// support all browsers and may not be reliable in all cases. So just save an undo state,
+// let the browser handle the insertion, and hope for the best.
 var onDrop = function ( event ) {
     var types = event.dataTransfer.types;
     var l = types.length;
     var hasPlain = false;
     var hasHTML = false;
+    var selection;
+
     while ( l-- ) {
         switch ( types[l] ) {
         case 'text/plain':
@@ -2429,7 +2440,17 @@ var onDrop = function ( event ) {
         }
     }
 
+    // Try our best to get the location of the insertion
+    if ( this._doc.caretRangeFromPoint ) {
+        selection = this._doc.caretRangeFromPoint( event.clientX, event.clientY );
+    } else if ( this._doc.caretPositionFromPoint ) {
+        var caretPosition = this._doc.caretPositionFromPoint( event.clientX, event.clientY );
+        selection = document.createRange();
+        selection.setStart( caretPosition.offsetNode, caretPosition.offset );
+    }
+
     var dropEvent = {
+        selection: selection,
         dataTransfer: event.dataTransfer,
         hasPlain: hasPlain,
         hasHTML: hasHTML,
@@ -4101,6 +4122,25 @@ proto.getHTML = function ( withBookMark ) {
     return html;
 };
 
+function _addAlignClassName ( className, alignment ) {
+    return ( className
+        .split( /\s+/ )
+        .filter( function ( klass ) {
+            return !( /align/.test( klass ) );
+        })
+        .join( ' ' ) +
+        ' align-' + alignment ).trim();
+}
+
+function _getAlignment ( node ) {
+    var alignment = null;
+    if ( node.align ) {
+        alignment = node.align;
+        node.removeAttribute( 'align' );
+    }
+    return alignment;
+}
+
 proto.setHTML = function ( html ) {
     var frag = this._doc.createDocumentFragment();
     var div = this.createElement( 'DIV' );
@@ -4119,6 +4159,14 @@ proto.setHTML = function ( html ) {
     // Fix cursor
     var node = frag;
     while ( node = getNextBlock( node, root ) ) {
+        // Replace the align attribute in P tag by style
+        if ( node.tagName.toUpperCase() === 'P' ) {
+            var alignment = _getAlignment( node );
+            if ( alignment ) {
+                node.className = _addAlignClassName( node.className, alignment );
+                node.style.textAlign = alignment;
+            }
+        }
         fixCursor( node, root );
     }
 
@@ -4569,13 +4617,7 @@ proto.setHighlightColour = function ( colour ) {
 
 proto.setTextAlignment = function ( alignment ) {
     this.forEachBlock( function ( block ) {
-        block.className = ( block.className
-            .split( /\s+/ )
-            .filter( function ( klass ) {
-                return !( /align/.test( klass ) );
-            })
-            .join( ' ' ) +
-            ' align-' + alignment ).trim();
+        block.className = _addAlignClassName( block.className, alignment );
         block.style.textAlign = alignment;
     }, true );
     return this.focus();

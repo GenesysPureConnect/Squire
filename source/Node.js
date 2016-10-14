@@ -298,6 +298,14 @@ function fixContainer ( container, root ) {
                  wrapper = createElement( doc,
                     config.blockTag, config.blockAttributes );
             }
+            // Replace the align attribute in IMG tag by style
+            if ( child.nodeName === 'IMG' ) {
+                var alignment = _getAlignment( child );
+                if ( alignment ) {
+                    wrapper.className = _addAlignClassName( wrapper.className, alignment );
+                    wrapper.style.textAlign = alignment;
+                }
+            }
             wrapper.appendChild( child );
             i -= 1;
             l -= 1;

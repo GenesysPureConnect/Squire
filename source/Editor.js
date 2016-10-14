@@ -1636,6 +1636,25 @@ proto.getHTML = function ( withBookMark ) {
     return html;
 };
 
+function _addAlignClassName ( className, alignment ) {
+    return ( className
+        .split( /\s+/ )
+        .filter( function ( klass ) {
+            return !( /align/.test( klass ) );
+        })
+        .join( ' ' ) +
+        ' align-' + alignment ).trim();
+}
+
+function _getAlignment ( node ) {
+    var alignment = null;
+    if ( node.align ) {
+        alignment = node.align;
+        node.removeAttribute( 'align' );
+    }
+    return alignment;
+}
+
 proto.setHTML = function ( html ) {
     var frag = this._doc.createDocumentFragment();
     var div = this.createElement( 'DIV' );
@@ -1654,6 +1673,14 @@ proto.setHTML = function ( html ) {
     // Fix cursor
     var node = frag;
     while ( node = getNextBlock( node, root ) ) {
+        // Replace the align attribute in P tag by style
+        if ( node.tagName.toUpperCase() === 'P' ) {
+            var alignment = _getAlignment( node );
+            if ( alignment ) {
+                node.className = _addAlignClassName( node.className, alignment );
+                node.style.textAlign = alignment;
+            }
+        }
         fixCursor( node, root );
     }
 
@@ -2104,13 +2131,7 @@ proto.setHighlightColour = function ( colour ) {
 
 proto.setTextAlignment = function ( alignment ) {
     this.forEachBlock( function ( block ) {
-        block.className = ( block.className
-            .split( /\s+/ )
-            .filter( function ( klass ) {
-                return !( /align/.test( klass ) );
-            })
-            .join( ' ' ) +
-            ' align-' + alignment ).trim();
+        block.className = _addAlignClassName( block.className, alignment );
         block.style.textAlign = alignment;
     }, true );
     return this.focus();
