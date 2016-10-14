@@ -1631,15 +1631,11 @@ function _addAlignClassName ( className, alignment ) {
         ' align-' + alignment ).trim();
 }
 
-function _getAlignment ( node, dir ) {
-    var defaultAlignment, alignment;
-    defaultAlignment = dir === 'rtl' ? 'right' : 'left';
+function _getAlignment ( node ) {
+    var alignment = null;
     if ( node.align ) {
         alignment = node.align;
         node.removeAttribute( 'align' );
-    }
-    else {
-        alignment = defaultAlignment ;
     }
     return alignment;
 }
@@ -1664,13 +1660,11 @@ proto.setHTML = function ( html ) {
     while ( node = getNextBlock( node, root ) ) {
         // Replace the align attribute in P tag by style
         if ( node.tagName.toUpperCase() === 'P' ) {
-            var dir, alignment;
-
-            dir = this._doc.dir.toLowerCase();
-            alignment = _getAlignment( node, dir );
-
-            node.className = _addAlignClassName( node.className, alignment );
-            node.style.textAlign = alignment;
+            var alignment = _getAlignment( node );
+            if ( alignment ) {
+                node.className = _addAlignClassName( node.className, alignment );
+                node.style.textAlign = alignment;
+            }
         }
         fixCursor( node, root );
     }
