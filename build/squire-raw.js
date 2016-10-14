@@ -478,6 +478,16 @@ function fixContainer ( container, root ) {
                  wrapper = createElement( doc,
                     config.blockTag, config.blockAttributes );
             }
+            // Replace the align attribute in IMG tag by style
+            if ( child.nodeName === 'IMG' ) {
+                var dir, alignment;
+
+                dir = doc.dir.toLowerCase();
+                alignment = _getAlignment( child, dir );
+                
+                wrapper.className = _addAlignClassName( wrapper.className, alignment );
+                wrapper.style.textAlign = alignment;
+            }
             wrapper.appendChild( child );
             i -= 1;
             l -= 1;
@@ -4099,6 +4109,29 @@ proto.getHTML = function ( withBookMark ) {
     return html;
 };
 
+function _addAlignClassName ( className, alignment ) {
+    return ( className
+        .split( /\s+/ )
+        .filter( function ( klass ) {
+            return !( /align/.test( klass ) );
+        })
+        .join( ' ' ) +
+        ' align-' + alignment ).trim();
+}
+
+function _getAlignment ( node, dir ) {
+    var defaultAlignment, alignment;
+    defaultAlignment = dir === 'rtl' ? 'right' : 'left';
+    if ( node.align ) {
+        alignment = node.align;
+        node.removeAttribute( 'align' );
+    }
+    else {
+        alignment = defaultAlignment ;
+    }
+    return alignment;
+}
+
 proto.setHTML = function ( html ) {
     var frag = this._doc.createDocumentFragment();
     var div = this.createElement( 'DIV' );
@@ -4117,6 +4150,16 @@ proto.setHTML = function ( html ) {
     // Fix cursor
     var node = frag;
     while ( node = getNextBlock( node, root ) ) {
+        // Replace the align attribute in P tag by style
+        if ( node.tagName.toUpperCase() === 'P' ) {
+            var dir, alignment;
+
+            dir = this._doc.dir.toLowerCase();
+            alignment = _getAlignment( node, dir );
+
+            node.className = _addAlignClassName( node.className, alignment );
+            node.style.textAlign = alignment;
+        }
         fixCursor( node, root );
     }
 
@@ -4567,13 +4610,7 @@ proto.setHighlightColour = function ( colour ) {
 
 proto.setTextAlignment = function ( alignment ) {
     this.forEachBlock( function ( block ) {
-        block.className = ( block.className
-            .split( /\s+/ )
-            .filter( function ( klass ) {
-                return !( /align/.test( klass ) );
-            })
-            .join( ' ' ) +
-            ' align-' + alignment ).trim();
+        block.className = _addAlignClassName( block.className, alignment );
         block.style.textAlign = alignment;
     }, true );
     return this.focus();
