@@ -187,6 +187,8 @@ Inserts an HTML fragment at the current cursor location, or replaces the selecti
 The method takes one argument:
 
 * **html**: The html to insert.
+* **isPaste**: Whether or not the insertion source is from a paste operation.
+* **preserveWS**: Whether or not to preserve any whitespace that was included in the HTML.
 
 Returns self (the Squire instance).
 
