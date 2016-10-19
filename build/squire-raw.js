@@ -4342,7 +4342,7 @@ var removeLink = function( linkNode ) {
 // Insert HTML at the cursor location. If the selection is not collapsed
 // insertTreeFragmentIntoRange will delete the selection so that it is replaced
 // by the html being inserted.
-proto.insertHTML = function ( html, isPaste ) {
+proto.insertHTML = function ( html, isPaste, preserveWS ) {
     var range = this.getSelection();
     var doc = this._doc;
     var startFragmentIndex, endFragmentIndex;
@@ -4389,7 +4389,7 @@ proto.insertHTML = function ( html, isPaste ) {
         };
 
         addLinks( frag, frag, this );
-        cleanTree( frag );
+        cleanTree( frag, preserveWS );
         cleanupBRs( frag, null );
         removeEmptyInlines( frag );
         frag.normalize();
