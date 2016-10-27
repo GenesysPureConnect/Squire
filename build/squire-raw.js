@@ -180,7 +180,7 @@ TreeWalker.prototype.previousPONode = function () {
     }
 };
 
-var inlineNodeNames  = /^(?:#text|A(?:BBR|CRONYM)?|B(?:R|D[IO])?|C(?:ITE|ODE)|D(?:ATA|EL|FN)|EM|FONT|HR|I(?:FRAME|MG|NPUT|NS)?|KBD|LI|[OU]L|Q|R(?:P|T|UBY)|S(?:AMP|MALL|PAN|TR(?:IKE|ONG)|U[BP])?|U|VAR|WBR)$/;
+var inlineNodeNames  = /^(?:#text|A(?:BBR|CRONYM)?|B(?:R|D[IO])?|C(?:ITE|ODE)|D(?:ATA|EL|FN)|EM|FONT|HR|I(?:FRAME|MG|NPUT|NS)?|KBD|Q|R(?:P|T|UBY)|S(?:AMP|MALL|PAN|TR(?:IKE|ONG)|U[BP])?|U|VAR|WBR)$/;
 
 var leafNodeNames = {
     BR: 1,
@@ -1099,6 +1099,17 @@ var moveRangeBoundariesDownTree = function ( range ) {
         range.setStart( startContainer, startOffset );
         range.setEnd( endContainer, endOffset );
     }
+
+    // When the endOffset is at beginning of a node while the startOffset is at the end of 
+    // the previous sibling node, set the end of the range to be the same as the start. 
+    // This could solve the cursor missing problem in Firefox when the IMG element surranded 
+    // by text is deleted. 
+    if ( range.startContainer === range.commonAncestorContainer.childNodes[0] &&
+         range.startOffset === range.commonAncestorContainer.childNodes[0].length && 
+         range.endContainer === range.commonAncestorContainer.childNodes[1] && 
+         range.endOffset === 0 ) {
+        range.setEnd( range.startContainer, range.startOffset );
+    }
 };
 
 var moveRangeBoundariesUpTree = function ( range, common ) {
@@ -1322,7 +1333,12 @@ var onKey = function ( event ) {
         this._updatePath( range, true );
     }
 
-    this.fireEvent( 'postKeyDown', event );
+    var postKeyDownEvent = {
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        which: event.which
+    };
+    this.fireEvent( 'postKeyDown', postKeyDownEvent );
 };
 
 var onKeyup =  function () {
@@ -4244,6 +4260,18 @@ proto.insertElement = function ( el, range ) {
     }
 
     return this;
+};
+
+proto.insertTabIndent = function( ) {
+    var tabElement, textElement;
+    tabElement = this.createElement( 'SPAN', {
+        style: 'letter-spacing: 40px;'
+    } );
+    tabElement.innerHTML = '&nbsp;';
+    this.insertElement( tabElement );
+    textElement = this.createElement( 'SPAN' );
+    fixCursor( textElement );
+    this.insertElement( textElement );
 };
 
 proto.insertImage = function ( src, attributes ) {
