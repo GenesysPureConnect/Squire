@@ -1760,11 +1760,11 @@ proto.insertElement = function ( el, range ) {
     return this;
 };
 
-proto.insertTabIndent = function( ) {
+proto.insertTabIndent = function() {
     var tabElement, textElement;
     tabElement = this.createElement( 'SPAN', {
         style: 'letter-spacing: 40px;'
-    } );
+    });
     tabElement.innerHTML = '&nbsp;';
     this.insertElement( tabElement );
     textElement = this.createElement( 'SPAN' );
