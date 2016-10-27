@@ -1100,8 +1100,16 @@ var moveRangeBoundariesDownTree = function ( range ) {
         range.setEnd( endContainer, endOffset );
     }
 
-    // Fix the cursor missing problem in Firefox when the IMG element surranded by text is deleted. 
-    range.collapse( true );
+    // When the endOffset is at beginning of a node while the startOffset is at the end of 
+    // the previous sibling node, set the end of the range to be the same as the start. 
+    // This could solve the cursor missing problem in Firefox when the IMG element surranded 
+    // by text is deleted. 
+    if ( range.startContainer === range.commonAncestorContainer.childNodes[0] &&
+         range.startOffset === range.commonAncestorContainer.childNodes[0].length && 
+         range.endContainer === range.commonAncestorContainer.childNodes[1] && 
+         range.endOffset === 0 ) {
+        range.collapse( true );
+    }
 };
 
 var moveRangeBoundariesUpTree = function ( range, common ) {
