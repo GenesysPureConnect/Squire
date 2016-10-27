@@ -1760,6 +1760,18 @@ proto.insertElement = function ( el, range ) {
     return this;
 };
 
+proto.insertTabIndent = function() {
+    var tabElement, textElement;
+    tabElement = this.createElement( 'SPAN', {
+        style: 'letter-spacing: 40px;'
+    });
+    tabElement.innerHTML = '&nbsp;';
+    this.insertElement( tabElement );
+    textElement = this.createElement( 'SPAN' );
+    fixCursor( textElement );
+    this.insertElement( textElement );
+};
+
 proto.insertImage = function ( src, attributes ) {
     var img = this.createElement( 'IMG', mergeObjects({
         src: src

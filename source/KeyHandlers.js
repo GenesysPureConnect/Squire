@@ -69,7 +69,12 @@ var onKey = function ( event ) {
         this._updatePath( range, true );
     }
 
-    this.fireEvent( 'postKeyDown', event );
+    var postKeyDownEvent = {
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        which: event.which
+    };
+    this.fireEvent( 'postKeyDown', postKeyDownEvent );
 };
 
 var onKeyup =  function () {
