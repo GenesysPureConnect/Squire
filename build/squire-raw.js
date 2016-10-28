@@ -1388,12 +1388,12 @@ var afterDelete = function ( self, range ) {
         var node = range.startContainer,
             parent;
         // Climb the tree from the focus point while we are inside an empty
-        // inline element
+        // inline element or list element
         if ( node.nodeType === TEXT_NODE ) {
             node = node.parentNode;
         }
         parent = node;
-        while ( isInline( parent ) &&
+        while ( ( isInline( parent ) || /LI|[OU]L/.test(parent.nodeName) ) &&
                 ( !parent.textContent || parent.textContent === ZWS ) ) {
             node = parent;
             parent = node.parentNode;
