@@ -1763,13 +1763,11 @@ proto.insertElement = function ( el, range ) {
 proto.insertTabIndent = function() {
     var tabElement, textElement;
     tabElement = this.createElement( 'SPAN', {
+        class: 'tabIndent',
         style: 'letter-spacing: 40px;'
     });
     tabElement.innerHTML = '&nbsp;';
     this.insertElement( tabElement );
-    textElement = this.createElement( 'SPAN' );
-    fixCursor( textElement );
-    this.insertElement( textElement );
 };
 
 proto.insertImage = function ( src, attributes ) {
