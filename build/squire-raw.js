@@ -1333,6 +1333,13 @@ var onKey = function ( event ) {
         this._updatePath( range, true );
     }
 
+    // Add ZWS after the tab span to avoid the new content is inserted into the tab span 
+    var nodeBeforCursor = range.endContainer.childNodes[ range.endOffset - 1 ];
+    if ( nodeBeforCursor && nodeBeforCursor.className === 'tabIndent' ) {
+      var fixer = this._doc.createTextNode( ZWS );
+      this.insertElement( fixer );
+    }
+
     var postKeyDownEvent = {
         ctrlKey: event.ctrlKey,
         altKey: event.altKey,
@@ -1413,6 +1420,13 @@ var afterDelete = function ( self, range ) {
             fixCursor( parent, self._root );
             // Move cursor into text node
             moveRangeBoundariesDownTree( range );
+        }
+        // If the current node is a tab span, add ZWS after it to avoid the new content
+        // is inserted into the tab span. 
+        if ( node.className === 'tabIndent' ) {
+          moveRangeBoundariesUpTree( range, node.parentNode );
+          var fixer = node.ownerDocument.createTextNode( ZWS );
+          self.insertElement( fixer );
         }
         // If you delete the last character in the sole <div> in Chrome,
         // it removes the div and replaces it with just a <br> inside the
@@ -4265,13 +4279,11 @@ proto.insertElement = function ( el, range ) {
 proto.insertTabIndent = function() {
     var tabElement, textElement;
     tabElement = this.createElement( 'SPAN', {
+        class: 'tabIndent',
         style: 'letter-spacing: 40px;'
     });
     tabElement.innerHTML = '&nbsp;';
     this.insertElement( tabElement );
-    textElement = this.createElement( 'SPAN' );
-    fixCursor( textElement );
-    this.insertElement( textElement );
 };
 
 proto.insertImage = function ( src, attributes ) {
