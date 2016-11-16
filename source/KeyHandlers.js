@@ -67,13 +67,13 @@ var onKey = function ( event ) {
         this._ensureBottomLine();
         this.setSelection( range );
         this._updatePath( range, true );
-    }
-
-    // Add ZWS after the tab span to avoid the new content is inserted into the tab span 
-    var nodeBeforCursor = range.endContainer.childNodes[ range.endOffset - 1 ];
-    if ( nodeBeforCursor && nodeBeforCursor.className === 'tabIndent' ) {
-      var fixer = this._doc.createTextNode( ZWS );
-      this.insertElement( fixer );
+    } else {
+        // Add ZWS after the tab span to avoid the new content is inserted into the tab span 
+        var nodeBeforCursor = range.endContainer.childNodes[ range.endOffset - 1 ];
+        if ( nodeBeforCursor && nodeBeforCursor.className === 'tabIndent' ) {
+          var fixer = this._doc.createTextNode( ZWS );
+          this.insertElement( fixer );
+        }
     }
 
     var postKeyDownEvent = {
@@ -157,12 +157,10 @@ var afterDelete = function ( self, range ) {
             // Move cursor into text node
             moveRangeBoundariesDownTree( range );
         }
-        // If the current node is a tab span, add ZWS after it to avoid the new content
+        // If the current node is a tab span, set range after it to avoid the new content
         // is inserted into the tab span. 
         if ( node.className === 'tabIndent' ) {
-          moveRangeBoundariesUpTree( range, node.parentNode );
-          var fixer = node.ownerDocument.createTextNode( ZWS );
-          self.insertElement( fixer );
+          range.setStartAfter( node );
         }
         // If you delete the last character in the sole <div> in Chrome,
         // it removes the div and replaces it with just a <br> inside the
