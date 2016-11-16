@@ -1337,6 +1337,7 @@ var onKey = function ( event ) {
         if ( nodeBeforCursor && nodeBeforCursor.className === 'tabIndent' ) {
           var fixer = this._doc.createTextNode( ZWS );
           this.insertElement( fixer );
+          this._didAddZWS();
         }
     }
 
