@@ -69,8 +69,8 @@ var onKey = function ( event ) {
         this._updatePath( range, true );
     } else {
         // Add ZWS after the tab span to avoid the new content is inserted into the tab span 
-        var nodeBeforCursor = range.endContainer.childNodes[ range.endOffset - 1 ];
-        if ( nodeBeforCursor && nodeBeforCursor.className === 'tabIndent' ) {
+        var nodeBeforeCursor = range.endContainer.childNodes[ range.endOffset - 1 ];
+        if ( nodeBeforeCursor && nodeBeforeCursor.className === 'tabIndent' ) {
           var fixer = this._doc.createTextNode( ZWS );
           this.insertElement( fixer );
           this._didAddZWS();
