@@ -67,14 +67,25 @@ var onKey = function ( event ) {
         this._ensureBottomLine();
         this.setSelection( range );
         this._updatePath( range, true );
-    } else {
-        // Add ZWS after the tab span to avoid the new content is inserted into the tab span 
-        var nodeBeforeCursor = range.endContainer.childNodes[ range.endOffset - 1 ];
-        if ( nodeBeforeCursor && nodeBeforeCursor.className === 'tabIndent' ) {
-          var fixer = this._doc.createTextNode( ZWS );
-          this.insertElement( fixer );
-          this._didAddZWS();
-        }
+    } 
+
+    // If the current cursor is after the tab span, add ZWS after the tab span to avoid the new content is
+    // inserted into the tab span 
+    var nodeBeforeCursor = range.endContainer.childNodes[ range.endOffset - 1 ];
+    if ( key !== 'backspace' && key !== 'left' && nodeBeforeCursor && nodeBeforeCursor.className === 'tabIndent' ) {
+      var fixer = this._doc.createTextNode( ZWS );
+      this.insertElement( fixer );
+      this._didAddZWS();
+    }
+
+    // If the current cursor is in the tab span, move the range after the tab span and add ZWS after it to
+    // avoid the new content is inserted into the tab span 
+    var parent = range.startContainer.parentNode;
+    if ( parent && parent.className === 'tabIndent' && key !== 'left' && key !== 'right' ) {
+      range.setStartAfter( parent );
+      var fixer = this._doc.createTextNode( ZWS );
+      this.insertElement( fixer, range );
+      this._didAddZWS();
     }
 
     var postKeyDownEvent = {
