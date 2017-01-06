@@ -177,6 +177,24 @@ var deleteContentsOfRange = function ( range, root ) {
     return frag;
 };
 
+var isNodeEmpty = function ( node ) {
+    if ( !node ) {
+        return false;
+    }
+
+    // check for image nodes
+    if ( node.nodeName === 'IMG' || node.querySelector( 'img' ) ) {
+        return false;
+    }
+
+    // otherwise, just test for non-whitespace characters
+    if ( !/\S/.test( node.textContent ) ) {
+        return true;
+    }
+
+    return false;
+};
+
 // ---
 
 var insertTreeFragmentIntoRange = function ( range, frag, root ) {
@@ -268,7 +286,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         // merge containers at the edges.
         next = nodeBeforeSplit.nextSibling;
         node = getPreviousBlock( next, root );
-        if ( node && !/\S/.test( node.textContent ) ) {
+        if ( isNodeEmpty( node ) ) {
             do {
                 parent = node.parentNode;
                 parent.removeChild( node );
@@ -291,7 +309,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         prev = nodeAfterSplit.previousSibling;
         node = isBlock( nodeAfterSplit ) ?
             nodeAfterSplit : getNextBlock( nodeAfterSplit, root );
-        if ( node && !/\S/.test( node.textContent ) ) {
+        if ( isNodeEmpty( node ) ) {
             do {
                 parent = node.parentNode;
                 parent.removeChild( node );
