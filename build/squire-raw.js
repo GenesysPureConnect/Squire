@@ -890,16 +890,12 @@ var deleteContentsOfRange = function ( range, root ) {
 };
 
 var isNodeEmpty = function ( node ) {
-    if (!node) {
+    if ( !node ) {
         return false;
     }
 
     // check for image nodes
-    if ( node.nodeType === Node.ELEMENT_NODE && node.nodeName === 'IMG' ) {
-        return false;
-    }
-
-    if ( node.querySelector('img') ) {
+    if ( node.nodeName === 'IMG' || node.querySelector( 'img' ) ) {
         return false;
     }
 
