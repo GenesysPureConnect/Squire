@@ -203,6 +203,28 @@ function every ( nodeList, fn ) {
 
 // ---
 
+var isNodeEmpty = function ( node, considerWhitespaceEmpty ) {
+    if ( !node ) {
+        return false;
+    }
+
+    // check for image nodes
+    if ( node.nodeName === 'IMG' || node.querySelector( 'img' ) ) {
+        return false;
+    }
+
+    // otherwise, just test for non-whitespace characters
+    if ( !node.textContent || node.textContent === ZWS ) {
+        return true;
+    }
+
+    if ( considerWhitespaceEmpty && !/\S/.test( node.textContent ) ) {
+        return true;
+    }
+
+    return false;
+};
+
 function isLeaf ( node ) {
     return node.nodeType === ELEMENT_NODE &&
         !!leafNodeNames[ node.nodeName ];
@@ -889,24 +911,6 @@ var deleteContentsOfRange = function ( range, root ) {
     return frag;
 };
 
-var isNodeEmpty = function ( node ) {
-    if ( !node ) {
-        return false;
-    }
-
-    // check for image nodes
-    if ( node.nodeName === 'IMG' || node.querySelector( 'img' ) ) {
-        return false;
-    }
-
-    // otherwise, just test for non-whitespace characters
-    if ( !/\S/.test( node.textContent ) ) {
-        return true;
-    }
-
-    return false;
-};
-
 // ---
 
 var insertTreeFragmentIntoRange = function ( range, frag, root ) {
@@ -998,7 +1002,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         // merge containers at the edges.
         next = nodeBeforeSplit.nextSibling;
         node = getPreviousBlock( next, root );
-        if ( isNodeEmpty( node ) ) {
+        if ( isNodeEmpty( node, true ) ) {
             do {
                 parent = node.parentNode;
                 parent.removeChild( node );
@@ -1021,7 +1025,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         prev = nodeAfterSplit.previousSibling;
         node = isBlock( nodeAfterSplit ) ?
             nodeAfterSplit : getNextBlock( nodeAfterSplit, root );
-        if ( isNodeEmpty( node ) ) {
+        if ( isNodeEmpty( node, true ) ) {
             do {
                 parent = node.parentNode;
                 parent.removeChild( node );
@@ -1431,7 +1435,7 @@ var afterDelete = function ( self, range ) {
         }
         parent = node;
         while ( ( isInline( parent ) || /LI|[OU]L/.test(parent.nodeName) ) &&
-                ( !parent.textContent || parent.textContent === ZWS ) ) {
+                isNodeEmpty( parent, false ) ) {
             node = parent;
             parent = node.parentNode;
         }

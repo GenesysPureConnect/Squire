@@ -23,6 +23,28 @@ function every ( nodeList, fn ) {
 
 // ---
 
+var isNodeEmpty = function ( node, considerWhitespaceEmpty ) {
+    if ( !node ) {
+        return false;
+    }
+
+    // check for image nodes
+    if ( node.nodeName === 'IMG' || node.querySelector( 'img' ) ) {
+        return false;
+    }
+
+    // otherwise, just test for non-whitespace characters
+    if ( !node.textContent || node.textContent === ZWS ) {
+        return true;
+    }
+
+    if ( considerWhitespaceEmpty && !/\S/.test( node.textContent ) ) {
+        return true;
+    }
+
+    return false;
+};
+
 function isLeaf ( node ) {
     return node.nodeType === ELEMENT_NODE &&
         !!leafNodeNames[ node.nodeName ];

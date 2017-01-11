@@ -149,7 +149,7 @@ var afterDelete = function ( self, range ) {
         }
         parent = node;
         while ( ( isInline( parent ) || /LI|[OU]L/.test(parent.nodeName) ) &&
-                ( !parent.textContent || parent.textContent === ZWS ) ) {
+                isNodeEmpty( parent, false ) ) {
             node = parent;
             parent = node.parentNode;
         }
