@@ -530,7 +530,7 @@ function mergeWithBlock ( block, next, range, root ) {
 
     // Remove extra <BR> fixer if present.
     last = block.lastChild;
-    if ( last && last.nodeName === 'BR' || last.nodeName === 'WBR' ) {
+    if ( last && ( last.nodeName === 'BR' || last.nodeName === 'WBR' ) ) {
         block.removeChild( last );
         offset -= 1;
     }
