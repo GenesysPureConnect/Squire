@@ -1,10 +1,8 @@
 /* Copyright © 2011-2015 by Neil Jenkins. MIT Licensed. */
-/*jshint ignore:start */
 
 ( function ( doc, undefined ) {
 
 "use strict";
-/*jshint strict:false, undef:false, unused:false */
 
 var DOCUMENT_POSITION_PRECEDING = 2; // Node.DOCUMENT_POSITION_PRECEDING
 var ELEMENT_NODE = 1;                // Node.ELEMENT_NODE;
@@ -65,7 +63,6 @@ if ( !Object.create ) {
         return new F();
     };
 }
-/*jshint strict:false */
 
 /*
     Native TreeWalker is buggy in IE and Opera:
@@ -183,7 +180,6 @@ TreeWalker.prototype.previousPONode = function () {
         current = node;
     }
 };
-/*jshint strict:false, undef:false, unused:false */
 
 var inlineNodeNames  = /^(?:#text|A(?:BBR|CRONYM)?|B(?:R|D[IO])?|C(?:ITE|ODE)|D(?:ATA|EL|FN)|EM|FONT|HR|I(?:FRAME|MG|NPUT|NS)?|KBD|Q|R(?:P|T|UBY)|S(?:AMP|MALL|PAN|TR(?:IKE|ONG)|U[BP])?|TIME|U|VAR|WBR)$/;
 
@@ -715,7 +711,7 @@ function mergeWithBlock ( block, next, range, root ) {
 
     // Remove extra <BR> fixer if present.
     last = block.lastChild;
-    if ( last && last.nodeName === 'BR' || last.nodeName === 'WBR' ) {
+    if ( last && ( last.nodeName === 'BR' || last.nodeName === 'WBR' ) ) {
         block.removeChild( last );
         offset -= 1;
     }
@@ -776,7 +772,6 @@ function mergeContainers ( node, root ) {
         fixCursor( prev, root );
     }
 }
-/*jshint strict:false, undef:false, unused:false, latedef:false */
 
 var getNodeBefore = function ( node, offset ) {
     var children = node.childNodes;
@@ -1315,7 +1310,6 @@ var expandRangeToBlockBoundaries = function ( range, root ) {
         range.setEnd( parent, indexOf.call( parent.childNodes, end ) + 1 );
     }
 };
-/*jshint strict:false, undef:false, unused:false */
 
 var keys = {
     8: 'backspace',
@@ -1875,7 +1869,6 @@ keyHandlers[ ctrlKey + ']' ] = mapKeyTo( 'increaseQuoteLevel' );
 keyHandlers[ ctrlKey + 'y' ] = mapKeyTo( 'redo' );
 keyHandlers[ ctrlKey + 'z' ] = mapKeyTo( 'undo' );
 keyHandlers[ ctrlKey + 'shift-z' ] = mapKeyTo( 'redo' );
-/*jshint strict:false, undef:false, unused:false */
 
 var fontSizes = {
     1: 10,
@@ -2248,7 +2241,6 @@ var cleanupBRs = function ( node, root, keepForBlankLine ) {
 
     cleanupWBRs( node );
 };
-/*jshint strict:false, undef:false, unused:false */
 
 // The (non-standard but supported enough) innerText property is based on the
 // render tree in Firefox and possibly other browsers, so we must insert the
@@ -2673,7 +2665,6 @@ var onDrop = function ( event ) {
         }, 0 );
     }
 };
-/*jshint strict:false, undef:false, unused:false */
 
 function mergeObjects ( base, extras, mayOverride ) {
     var prop, value;
@@ -4555,7 +4546,7 @@ proto.insertElement = function ( el, range ) {
 };
 
 proto.insertTabIndent = function() {
-    var tabElement, textElement;
+    var tabElement;
     tabElement = this.createElement( 'SPAN', {
         class: 'tabIndent',
         style: 'letter-spacing: 40px;'
@@ -5074,7 +5065,6 @@ proto.decreaseQuoteLevel = command( 'modifyBlocks', decreaseBlockQuoteLevel );
 proto.makeUnorderedList = command( 'modifyBlocks', makeUnorderedList );
 proto.makeOrderedList = command( 'modifyBlocks', makeOrderedList );
 proto.removeList = command( 'modifyBlocks', removeList );
-/*jshint ignore:start */
 
 // Node.js exports
 Squire.isInline = isInline;
@@ -5116,7 +5106,6 @@ Squire.addLinks = addLinks;
 Squire.splitBlock = splitBlock;
 Squire.startSelectionId = startSelectionId;
 Squire.endSelectionId = endSelectionId;
-/*jshint ignore:start */
 
 if ( typeof exports === 'object' ) {
     module.exports = Squire;
