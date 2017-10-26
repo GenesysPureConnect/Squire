@@ -457,7 +457,8 @@ var keyHandlers = {
                 if ( parent.nodeName === 'UL' || parent.nodeName === 'OL' ) {
                     // Then increase the list level
                     event.preventDefault();
-                    self.increaseListLevel( range );
+                    // I3 addition: be smart about how we increase the list level
+                    self.increaseIndentOrListLevel( range );
                     break;
                 }
                 node = parent;
@@ -475,7 +476,8 @@ var keyHandlers = {
             if ( getNearest( node, root, 'UL' ) ||
                     getNearest( node, root, 'OL' ) ) {
                 event.preventDefault();
-                self.decreaseListLevel( range );
+                // I3 addition: be smart about how we decrease the list level
+                self.decreaseIndentOrListLevel( range );
             }
         }
     },
