@@ -1558,6 +1558,22 @@ var getListSelection = function ( range, root ) {
     return [ list, startLi, endLi ];
 };
 
+// It would be _really_ nice if we could use Squire.setConfig here
+// but we need to change the list style based on the depth of the list
+// so we have to do that dynamically.
+var listStyles = {
+    ol: [ 'decimal', 'lower-latin', 'lower-roman' ],
+    ul: [ 'disc', 'circle', 'square' ]
+};
+function getListStyleType( type, parent ) {
+    var styles = listStyles[ type.toLowerCase() ];
+    var index = styles.indexOf( parent.style.listStyleType );
+    if ( index < 0 ) {
+        index = 0;
+    }
+    return styles[ ( index + 1 ) % styles.length ];
+}
+
 proto.increaseListLevel = function ( range ) {
     if ( !range && !( range = this.getSelection() ) ) {
         return this.focus();
@@ -1586,6 +1602,7 @@ proto.increaseListLevel = function ( range ) {
     if ( newParent.nodeName !== type ) {
         listAttrs = this._config.tagAttributes[ type.toLowerCase() ];
         newParent = this.createElement( type, listAttrs );
+        newParent.style.listStyleType = getListStyleType( type, list );
         list.insertBefore( newParent, startLi );
     }
     do {
