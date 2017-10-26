@@ -1768,7 +1768,8 @@ var keyHandlers = {
                 if ( parent.nodeName === 'UL' || parent.nodeName === 'OL' ) {
                     // Then increase the list level
                     event.preventDefault();
-                    self.increaseListLevel( range );
+                    // I3 addition: be smart about how we increase the list level
+                    self.increaseIndentOrListLevel( range );
                     break;
                 }
                 node = parent;
@@ -1786,7 +1787,8 @@ var keyHandlers = {
             if ( getNearest( node, root, 'UL' ) ||
                     getNearest( node, root, 'OL' ) ) {
                 event.preventDefault();
-                self.decreaseListLevel( range );
+                // I3 addition: be smart about how we decrease the list level
+                self.decreaseIndentOrListLevel( range );
             }
         }
     },
@@ -3988,37 +3990,47 @@ proto.forEachBlock = function ( fn, mutates, range ) {
     return this;
 };
 
-proto.modifyBlocks = function ( modify, range ) {
-    if ( !range && !( range = this.getSelection() ) ) {
+// I3 addition: We're updating the signature of this method to take an additional range
+// that represents what is currently selected (and thus the selection that should be preserved).
+// We do this so that we can modify a range that isn't our selection but still have undo states
+// recorded correctly.
+proto.modifyBlocks = function ( modify, rangeToModify, rangeToSelect ) {
+    if ( !rangeToModify && !( rangeToModify = this.getSelection() ) ) {
         return this;
     }
 
+    // If `rangeToSelect` was not specified, then we should just use `rangeToModify` to
+    // provide backwards compatibility.
+    if ( !rangeToSelect ) {
+        rangeToSelect = rangeToModify;
+    }
+
     // 1. Save undo checkpoint and bookmark selection
-    this._recordUndoState( range, this._isInUndoState );
+    this._recordUndoState( rangeToSelect, this._isInUndoState );
 
     var root = this._root;
     var frag;
 
-    // 2. Expand range to block boundaries
-    expandRangeToBlockBoundaries( range, root );
+    // 2. Expand rangeToModify to block boundaries
+    expandRangeToBlockBoundaries( rangeToModify, root );
 
-    // 3. Remove range.
-    moveRangeBoundariesUpTree( range, root, root, root );
-    frag = extractContentsOfRange( range, root, root );
+    // 3. Remove rangeToModify.
+    moveRangeBoundariesUpTree( rangeToModify, root, root, root );
+    frag = extractContentsOfRange( rangeToModify, root, root );
 
     // 4. Modify tree of fragment and reinsert.
-    insertNodeInRange( range, modify.call( this, frag ) );
+    insertNodeInRange( rangeToModify, modify.call( this, frag ) );
 
     // 5. Merge containers at edges
-    if ( range.endOffset < range.endContainer.childNodes.length ) {
-        mergeContainers( range.endContainer.childNodes[ range.endOffset ], root );
+    if ( rangeToModify.endOffset < rangeToModify.endContainer.childNodes.length ) {
+        mergeContainers( rangeToModify.endContainer.childNodes[ rangeToModify.endOffset ], root );
     }
-    mergeContainers( range.startContainer.childNodes[ range.startOffset ], root );
+    mergeContainers( rangeToModify.startContainer.childNodes[ rangeToModify.startOffset ], root );
 
     // 6. Restore selection
-    this._getRangeAndRemoveBookmark( range );
-    this.setSelection( range );
-    this._updatePath( range, true );
+    this._getRangeAndRemoveBookmark( rangeToSelect );
+    this.setSelection( rangeToSelect );
+    this._updatePath( rangeToSelect, true );
 
     // 7. We're not still in an undo state
     if ( !canObserveMutations ) {
@@ -4224,6 +4236,113 @@ var getListSelection = function ( range, root ) {
     return [ list, startLi, endLi ];
 };
 
+// This function applies some logic to determine whether or not to increase the indent of the
+// given selection or to increase the list level. The behavior is modeled after MS Word.
+//  1) If the selection is not part of a list, just increase the indent
+//  2) If the selection is part of a list:
+//    1) If the selection begins at the first element of the outermost list, increase the indent of the whole list
+//    2) Otherwise, increase the list level
+//
+// Much of the logic for detecting where we are in the list was taken directly from `increaseListLevel`
+proto.increaseIndentOrListLevel = function( range ) {
+    // Our range and/or selection is empty...nothing to do
+    if ( !range && !( range = this.getSelection() ) ) {
+        return this.focus();
+    }
+
+    var root = this._root;
+    var listSelection = getListSelection( range, root );
+    if ( !listSelection ) {
+        // There's no list, so we must want to increase indent
+        return this.increaseIndent( range );
+    }
+
+    var list = listSelection[0];
+    var startLi = listSelection[1];
+    var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
+    if ( !startLi ) {
+        return this.focus();
+    }
+    if ( startLi === list.firstChild && !nested ) {
+        // This is a list, but it is the first element of the parent list, so increase the margin
+        // of the entire list
+        var listRange = this._doc.createRange();
+        listRange.setStartBefore( list );
+        listRange.setEndAfter( list );
+
+        this.modifyBlocks( increaseIndent, listRange, range );
+        return this.focus();
+    }
+
+    // If we made it this far, we must be in a list and can increase the list level.
+    return this.increaseListLevel( range );
+};
+
+// This function applies some logic to determine whether or not to decrease the indent of the
+// given selection or to decrease the list level. The behavior is modeled after MS Word.
+//  1) If the selection is not part of a list, just decrease the indent
+//  2) If the selection is part of a list:
+//    1) If the selection contains part of the outermost list:
+//      1) If the selection begins with the first child, decrease the indent of the whole list
+//      2) If the selection does not begin with the first child, do nothing
+//    2) If the selection does not contain part of the outermost list, decrease the list level
+//
+// Much of the logic for detecting where we are in the list was taken directly from `increaseListLevel`
+proto.decreaseIndentOrListLevel = function( range ) {
+    // Our range and/or selection is empty...nothing to do
+    if ( !range && !( range = this.getSelection() ) ) {
+        return this.focus();
+    }
+
+    var root = this._root;
+    var listSelection = getListSelection( range, root );
+    if ( !listSelection ) {
+        // There's no list, so we must want to decrease indent
+        return this.decreaseIndent( range );
+    }
+
+    var list = listSelection[0];
+    var startLi = listSelection[1];
+    var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
+    if ( !startLi ) {
+        return this.focus();
+    }
+    if ( !nested ) {
+        if ( startLi === list.firstChild ) {
+            // This is a list, and we are at the first element of the outermost list, so increase the
+            // margin of the entire list
+
+            var listRange = this._doc.createRange();
+            listRange.setStartBefore( list );
+            listRange.setEndAfter( list );
+
+            this.modifyBlocks( decreaseIndent, listRange, range );
+            return this.focus();
+        }
+        // Do nothing to the list
+        return this.focus();
+    }
+
+    // If we made it this far, we must be in a list and can decrease the list level.
+    return this.decreaseListLevel( range );
+};
+
+// It would be _really_ nice if we could use Squire.setConfig here
+// but we need to change the list style based on the depth of the list
+// so we have to do that dynamically.
+var listStyles = {
+    ol: [ 'decimal', 'lower-latin', 'lower-roman' ],
+    ul: [ 'disc', 'circle', 'square' ]
+};
+function getListStyleType( type, parent ) {
+    var styles = listStyles[ type.toLowerCase() ];
+    var index = styles.indexOf( parent.style.listStyleType );
+    if ( index < 0 ) {
+        index = 0;
+    }
+    return styles[ ( index + 1 ) % styles.length ];
+}
+
 proto.increaseListLevel = function ( range ) {
     if ( !range && !( range = this.getSelection() ) ) {
         return this.focus();
@@ -4238,7 +4357,9 @@ proto.increaseListLevel = function ( range ) {
     var list = listSelection[0];
     var startLi = listSelection[1];
     var endLi = listSelection[2];
-    if ( !startLi || startLi === list.firstChild ) {
+    var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
+    // I3 addition: if we are starting on the first item of a nested list, don't return yet.
+    if ( !startLi || ( startLi === list.firstChild && !nested ) ) {
         return this.focus();
     }
 
@@ -4249,9 +4370,12 @@ proto.increaseListLevel = function ( range ) {
     var type = list.nodeName;
     var newParent = startLi.previousSibling;
     var listAttrs, next;
-    if ( newParent.nodeName !== type ) {
+    // I3 addition: now that we can be in a nested list the previousSibling (newParent)
+    // may be null - in which case we just want to create a new list like normal
+    if ( !newParent || newParent.nodeName !== type ) {
         listAttrs = this._config.tagAttributes[ type.toLowerCase() ];
         newParent = this.createElement( type, listAttrs );
+        newParent.style.listStyleType = getListStyleType( type, list );
         list.insertBefore( newParent, startLi );
     }
     do {
