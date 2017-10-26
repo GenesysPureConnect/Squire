@@ -1322,37 +1322,47 @@ proto.forEachBlock = function ( fn, mutates, range ) {
     return this;
 };
 
-proto.modifyBlocks = function ( modify, range ) {
-    if ( !range && !( range = this.getSelection() ) ) {
+// I3 addition: We're updating the signature of this method to take an additional range
+// that represents what is currently selected (and thus the selection that should be preserved).
+// We do this so that we can modify a range that isn't our selection but still have undo states
+// recorded correctly.
+proto.modifyBlocks = function ( modify, rangeToModify, rangeToSelect ) {
+    if ( !rangeToModify && !( rangeToModify = this.getSelection() ) ) {
         return this;
     }
 
+    // If `rangeToSelect` was not specified, then we should just use `rangeToModify` to
+    // provide backwards compatibility.
+    if ( !rangeToSelect ) {
+        rangeToSelect = rangeToModify;
+    }
+
     // 1. Save undo checkpoint and bookmark selection
-    this._recordUndoState( range, this._isInUndoState );
+    this._recordUndoState( rangeToSelect, this._isInUndoState );
 
     var root = this._root;
     var frag;
 
-    // 2. Expand range to block boundaries
-    expandRangeToBlockBoundaries( range, root );
+    // 2. Expand rangeToModify to block boundaries
+    expandRangeToBlockBoundaries( rangeToModify, root );
 
-    // 3. Remove range.
-    moveRangeBoundariesUpTree( range, root, root, root );
-    frag = extractContentsOfRange( range, root, root );
+    // 3. Remove rangeToModify.
+    moveRangeBoundariesUpTree( rangeToModify, root, root, root );
+    frag = extractContentsOfRange( rangeToModify, root, root );
 
     // 4. Modify tree of fragment and reinsert.
-    insertNodeInRange( range, modify.call( this, frag ) );
+    insertNodeInRange( rangeToModify, modify.call( this, frag ) );
 
     // 5. Merge containers at edges
-    if ( range.endOffset < range.endContainer.childNodes.length ) {
-        mergeContainers( range.endContainer.childNodes[ range.endOffset ], root );
+    if ( rangeToModify.endOffset < rangeToModify.endContainer.childNodes.length ) {
+        mergeContainers( rangeToModify.endContainer.childNodes[ rangeToModify.endOffset ], root );
     }
-    mergeContainers( range.startContainer.childNodes[ range.startOffset ], root );
+    mergeContainers( rangeToModify.startContainer.childNodes[ rangeToModify.startOffset ], root );
 
     // 6. Restore selection
-    this._getRangeAndRemoveBookmark( range );
-    this.setSelection( range );
-    this._updatePath( range, true );
+    this._getRangeAndRemoveBookmark( rangeToSelect );
+    this.setSelection( rangeToSelect );
+    this._updatePath( rangeToSelect, true );
 
     // 7. We're not still in an undo state
     if ( !canObserveMutations ) {
