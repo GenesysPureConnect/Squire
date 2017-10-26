@@ -1591,7 +1591,6 @@ proto.increaseIndentOrListLevel = function( range ) {
 
     var list = listSelection[0];
     var startLi = listSelection[1];
-    var endLi = listSelection[2];
     var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
     if ( !startLi ) {
         return this.focus();
@@ -1635,7 +1634,6 @@ proto.decreaseIndentOrListLevel = function( range ) {
 
     var list = listSelection[0];
     var startLi = listSelection[1];
-    var endLi = listSelection[2];
     var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
     if ( !startLi ) {
         return this.focus();
