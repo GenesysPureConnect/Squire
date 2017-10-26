@@ -1568,6 +1568,97 @@ var getListSelection = function ( range, root ) {
     return [ list, startLi, endLi ];
 };
 
+// This function applies some logic to determine whether or not to increase the indent of the
+// given selection or to increase the list level. The behavior is modeled after MS Word.
+//  1) If the selection is not part of a list, just increase the indent
+//  2) If the selection is part of a list:
+//    1) If the selection begins at the first element of the outermost list, increase the indent of the whole list
+//    2) Otherwise, increase the list level
+//
+// Much of the logic for detecting where we are in the list was taken directly from `increaseListLevel`
+proto.increaseIndentOrListLevel = function( range ) {
+    // Our range and/or selection is empty...nothing to do
+    if ( !range && !( range = this.getSelection() ) ) {
+        return this.focus();
+    }
+
+    var root = this._root;
+    var listSelection = getListSelection( range, root );
+    if ( !listSelection ) {
+        // There's no list, so we must want to increase indent
+        return this.increaseIndent( range );
+    }
+
+    var list = listSelection[0];
+    var startLi = listSelection[1];
+    var endLi = listSelection[2];
+    var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
+    if ( !startLi ) {
+        return this.focus();
+    }
+    if ( startLi === list.firstChild && !nested ) {
+        // This is a list, but it is the first element of the parent list, so increase the margin
+        // of the entire list
+        var listRange = this._doc.createRange();
+        listRange.setStartBefore( list );
+        listRange.setEndAfter( list );
+
+        return this.modifyBlocks( increaseIndent, listRange, range );
+    }
+
+    // If we made it this far, we must be in a list and can increase the list level.
+    return this.increaseListLevel( range );
+};
+
+// This function applies some logic to determine whether or not to decrease the indent of the
+// given selection or to decrease the list level. The behavior is modeled after MS Word.
+//  1) If the selection is not part of a list, just decrease the indent
+//  2) If the selection is part of a list:
+//    1) If the selection contains part of the outermost list:
+//      1) If the selection begins with the first child, decrease the indent of the whole list
+//      2) If the selection does not begin with the first child, do nothing
+//    2) If the selection does not contain part of the outermost list, decrease the list level
+//
+// Much of the logic for detecting where we are in the list was taken directly from `increaseListLevel`
+proto.decreaseIndentOrListLevel = function( range ) {
+    // Our range and/or selection is empty...nothing to do
+    if ( !range && !( range = this.getSelection() ) ) {
+        return this.focus();
+    }
+
+    var root = this._root;
+    var listSelection = getListSelection( range, root );
+    if ( !listSelection ) {
+        // There's no list, so we must want to decrease indent
+        return this.decreaseIndent( range );
+    }
+
+    var list = listSelection[0];
+    var startLi = listSelection[1];
+    var endLi = listSelection[2];
+    var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
+    if ( !startLi ) {
+        return this.focus();
+    }
+    if ( !nested ) {
+        if ( startLi === list.firstChild ) {
+            // This is a list, and we are at the first element of the outermost list, so increase the
+            // margin of the entire list
+
+            var listRange = this._doc.createRange();
+            listRange.setStartBefore( list );
+            listRange.setEndAfter( list );
+
+            return this.modifyBlocks( decreaseIndent, listRange, range );
+        }
+        // Do nothing to the list
+        return this.focus();
+    }
+
+    // If we made it this far, we must be in a list and can decrease the list level.
+    return this.decreaseListLevel( range );
+};
+
 // It would be _really_ nice if we could use Squire.setConfig here
 // but we need to change the list style based on the depth of the list
 // so we have to do that dynamically.
