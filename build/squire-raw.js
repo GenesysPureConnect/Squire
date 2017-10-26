@@ -4259,7 +4259,6 @@ proto.increaseIndentOrListLevel = function( range ) {
 
     var list = listSelection[0];
     var startLi = listSelection[1];
-    var endLi = listSelection[2];
     var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
     if ( !startLi ) {
         return this.focus();
@@ -4271,7 +4270,8 @@ proto.increaseIndentOrListLevel = function( range ) {
         listRange.setStartBefore( list );
         listRange.setEndAfter( list );
 
-        return this.modifyBlocks( increaseIndent, listRange, range );
+        this.modifyBlocks( increaseIndent, listRange, range );
+        return this.focus();
     }
 
     // If we made it this far, we must be in a list and can increase the list level.
@@ -4303,7 +4303,6 @@ proto.decreaseIndentOrListLevel = function( range ) {
 
     var list = listSelection[0];
     var startLi = listSelection[1];
-    var endLi = listSelection[2];
     var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
     if ( !startLi ) {
         return this.focus();
@@ -4317,7 +4316,8 @@ proto.decreaseIndentOrListLevel = function( range ) {
             listRange.setStartBefore( list );
             listRange.setEndAfter( list );
 
-            return this.modifyBlocks( decreaseIndent, listRange, range );
+            this.modifyBlocks( decreaseIndent, listRange, range );
+            return this.focus();
         }
         // Do nothing to the list
         return this.focus();
