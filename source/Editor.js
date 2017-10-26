@@ -1602,7 +1602,8 @@ proto.increaseIndentOrListLevel = function( range ) {
         listRange.setStartBefore( list );
         listRange.setEndAfter( list );
 
-        return this.modifyBlocks( increaseIndent, listRange, range );
+        this.modifyBlocks( increaseIndent, listRange, range );
+        return this.focus();
     }
 
     // If we made it this far, we must be in a list and can increase the list level.
@@ -1647,7 +1648,8 @@ proto.decreaseIndentOrListLevel = function( range ) {
             listRange.setStartBefore( list );
             listRange.setEndAfter( list );
 
-            return this.modifyBlocks( decreaseIndent, listRange, range );
+            this.modifyBlocks( decreaseIndent, listRange, range );
+            return this.focus();
         }
         // Do nothing to the list
         return this.focus();
