@@ -1588,7 +1588,9 @@ proto.increaseListLevel = function ( range ) {
     var list = listSelection[0];
     var startLi = listSelection[1];
     var endLi = listSelection[2];
-    if ( !startLi || startLi === list.firstChild ) {
+    var nested = list.parentNode && list.parentNode.nodeName === list.nodeName;
+    // I3 addition: if we are starting on the first item of a nested list, don't return yet.
+    if ( !startLi || ( startLi === list.firstChild && !nested ) ) {
         return this.focus();
     }
 
@@ -1599,7 +1601,9 @@ proto.increaseListLevel = function ( range ) {
     var type = list.nodeName;
     var newParent = startLi.previousSibling;
     var listAttrs, next;
-    if ( newParent.nodeName !== type ) {
+    // I3 addition: now that we can be in a nested list the previousSibling (newParent)
+    // may be null - in which case we just want to create a new list like normal
+    if ( !newParent || newParent.nodeName !== type ) {
         listAttrs = this._config.tagAttributes[ type.toLowerCase() ];
         newParent = this.createElement( type, listAttrs );
         newParent.style.listStyleType = getListStyleType( type, list );
