@@ -90,13 +90,33 @@ function isEmptyBlock ( block ) {
 }
 
 function areAlike ( node, node2 ) {
+    var equivalent = function (a, b) {
+        if (a == b) {
+            return true;
+        }
+        if (a === undefined || b === undefined) {
+            return false;
+        }
+
+        var aProps = Object.getOwnPropertyNames(a);
+        var bProps = Object.getOwnPropertyNames(b);
+
+        for (var i = 0; i < aProps.length; i++) {
+            var key = aProps[i];
+            if (a[key] !== b[key]) {
+                return false;
+            }
+        }
+        return true;
+    }
     return !isLeaf( node ) && (
         node.nodeType === node2.nodeType &&
         node.nodeName === node2.nodeName &&
         node.nodeName !== 'A' &&
         node.className === node2.className &&
         ( ( !node.style && !node2.style ) ||
-          node.style.cssText === node2.style.cssText )
+          node.style.cssText === node2.style.cssText ) &&
+        equivalent(node.dataset, node2.dataset)
     );
 }
 function hasTagAttributes ( node, tag, attributes ) {
@@ -322,6 +342,7 @@ function fixContainer ( container, root ) {
             if ( !wrapper ) {
                  wrapper = createElement( doc,
                     config.blockTag, config.blockAttributes );
+                copyExtraAttributes(container, wrapper);
             }
             wrapper.appendChild( child );
             i -= 1;

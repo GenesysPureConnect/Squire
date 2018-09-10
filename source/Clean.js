@@ -88,6 +88,7 @@ var replaceStyles = function ( node, parent ) {
             el = converter.replace( doc, css );
             if ( !newTreeTop ) {
                 newTreeTop = el;
+                copyExtraAttributes(node, newTreeTop);
             }
             if ( newTreeBottom ) {
                 newTreeBottom.appendChild( el );
@@ -356,3 +357,15 @@ var cleanupBRs = function ( node, root, keepForBlankLine ) {
         }
     }
 };
+
+function copyExtraAttributes(src, dest) {
+    if (src.dataset) {
+        Object.keys(src.dataset).forEach(function(key) {
+            dest.dataset[key] = src.dataset[key];
+        });
+    }
+
+    if (src.isContentEditable === false) {
+        dest.contentEditable = src.isContentEditable;
+    }
+}

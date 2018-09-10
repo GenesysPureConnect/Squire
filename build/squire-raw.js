@@ -1,8 +1,10 @@
 /* Copyright © 2011-2015 by Neil Jenkins. MIT Licensed. */
+/*jshint ignore:start */
 
 ( function ( doc, undefined ) {
 
 "use strict";
+/*jshint strict:false, undef:false, unused:false */
 
 var DOCUMENT_POSITION_PRECEDING = 2; // Node.DOCUMENT_POSITION_PRECEDING
 var ELEMENT_NODE = 1;                // Node.ELEMENT_NODE;
@@ -62,6 +64,7 @@ if ( !Object.create ) {
         return new F();
     };
 }
+/*jshint strict:false */
 
 /*
     Native TreeWalker is buggy in IE and Opera:
@@ -179,6 +182,7 @@ TreeWalker.prototype.previousPONode = function () {
         current = node;
     }
 };
+/*jshint strict:false, undef:false, unused:false */
 
 var inlineNodeNames  = /^(?:#text|A(?:BBR|CRONYM)?|B(?:R|D[IO])?|C(?:ITE|ODE)|D(?:ATA|EL|FN)|EM|FONT|HR|I(?:FRAME|MG|NPUT|NS)?|KBD|Q|R(?:P|T|UBY)|S(?:AMP|MALL|PAN|TR(?:IKE|ONG)|U[BP])?|TIME|U|VAR|WBR)$/;
 
@@ -270,13 +274,33 @@ function isEmptyBlock ( block ) {
 }
 
 function areAlike ( node, node2 ) {
+    var equivalent = function (a, b) {
+        if (a == b) {
+            return true;
+        }
+        if (a === undefined || b === undefined) {
+            return false;
+        }
+
+        var aProps = Object.getOwnPropertyNames(a);
+        var bProps = Object.getOwnPropertyNames(b);
+
+        for (var i = 0; i < aProps.length; i++) {
+            var key = aProps[i];
+            if (a[key] !== b[key]) {
+                return false;
+            }
+        }
+        return true;
+    }
     return !isLeaf( node ) && (
         node.nodeType === node2.nodeType &&
         node.nodeName === node2.nodeName &&
         node.nodeName !== 'A' &&
         node.className === node2.className &&
         ( ( !node.style && !node2.style ) ||
-          node.style.cssText === node2.style.cssText )
+          node.style.cssText === node2.style.cssText ) &&
+        equivalent(node.dataset, node2.dataset)
     );
 }
 function hasTagAttributes ( node, tag, attributes ) {
@@ -502,6 +526,7 @@ function fixContainer ( container, root ) {
             if ( !wrapper ) {
                  wrapper = createElement( doc,
                     config.blockTag, config.blockAttributes );
+                copyExtraAttributes(container, wrapper);
             }
             wrapper.appendChild( child );
             i -= 1;
@@ -731,6 +756,7 @@ function mergeContainers ( node, root ) {
         fixCursor( prev, root );
     }
 }
+/*jshint strict:false, undef:false, unused:false, latedef:false */
 
 var getNodeBefore = function ( node, offset ) {
     var children = node.childNodes;
@@ -1105,6 +1131,18 @@ var moveRangeBoundariesUpTree = function ( range, startMax, endMax, root ) {
         endMax = startMax;
     }
 
+    var notEditable = function(element) {
+        while (element) {
+            if (element.isContentEditable === false) {
+                return true;
+            } else if (element.isContentEditable == true) {
+                return false;
+            }
+            element = element.parentElement;
+        }
+        return false;
+    }
+
     while ( !startOffset &&
             startContainer !== startMax &&
             startContainer !== root ) {
@@ -1129,6 +1167,14 @@ var moveRangeBoundariesUpTree = function ( range, startMax, endMax, root ) {
         parent = endContainer.parentNode;
         endOffset = indexOf.call( parent.childNodes, endContainer ) + 1;
         endContainer = parent;
+    }
+
+    if (notEditable(startContainer)) {
+        startOffset = 0;
+    }
+
+    if (notEditable(endContainer)) {
+        endOffset = getLength(endContainer);
     }
 
     range.setStart( startContainer, startOffset );
@@ -1258,6 +1304,7 @@ var expandRangeToBlockBoundaries = function ( range, root ) {
         range.setEnd( parent, indexOf.call( parent.childNodes, end ) + 1 );
     }
 };
+/*jshint strict:false, undef:false, unused:false */
 
 var keys = {
     8: 'backspace',
@@ -1759,6 +1806,7 @@ keyHandlers[ ctrlKey + ']' ] = mapKeyTo( 'increaseQuoteLevel' );
 keyHandlers[ ctrlKey + 'y' ] = mapKeyTo( 'redo' );
 keyHandlers[ ctrlKey + 'z' ] = mapKeyTo( 'undo' );
 keyHandlers[ ctrlKey + 'shift-z' ] = mapKeyTo( 'redo' );
+/*jshint strict:false, undef:false, unused:false */
 
 var fontSizes = {
     1: 10,
@@ -1848,6 +1896,7 @@ var replaceStyles = function ( node, parent ) {
             el = converter.replace( doc, css );
             if ( !newTreeTop ) {
                 newTreeTop = el;
+                copyExtraAttributes(node, newTreeTop);
             }
             if ( newTreeBottom ) {
                 newTreeBottom.appendChild( el );
@@ -2116,6 +2165,19 @@ var cleanupBRs = function ( node, root, keepForBlankLine ) {
         }
     }
 };
+
+function copyExtraAttributes(src, dest) {
+    if (src.dataset) {
+        Object.keys(src.dataset).forEach(function(key) {
+            dest.dataset[key] = src.dataset[key];
+        });
+    }
+
+    if (src.isContentEditable === false) {
+        dest.contentEditable = src.isContentEditable;
+    }
+}
+/*jshint strict:false, undef:false, unused:false */
 
 // The (non-standard but supported enough) innerText property is based on the
 // render tree in Firefox and possibly other browsers, so we must insert the
@@ -2433,6 +2495,7 @@ var onDrop = function ( event ) {
         this.saveUndoState();
     }
 };
+/*jshint strict:false, undef:false, unused:false */
 
 function mergeObjects ( base, extras, mayOverride ) {
     var prop, value;
@@ -3541,7 +3604,7 @@ proto._removeFormat = function ( tag, attributes, range, partial ) {
     var doc = this._doc,
         fixer;
     if ( range.collapsed ) {
-        if ( cantFocusEmptyTextNodes ) {
+        if ( cantFocusEmptyTextNodes && !this._hasZWS ) {
             fixer = doc.createTextNode( ZWS );
             this._didAddZWS();
         } else {
@@ -4632,6 +4695,7 @@ proto.decreaseQuoteLevel = command( 'modifyBlocks', decreaseBlockQuoteLevel );
 proto.makeUnorderedList = command( 'modifyBlocks', makeUnorderedList );
 proto.makeOrderedList = command( 'modifyBlocks', makeOrderedList );
 proto.removeList = command( 'modifyBlocks', removeList );
+/*jshint ignore:start */
 
 // Node.js exports
 Squire.isInline = isInline;
@@ -4673,6 +4737,7 @@ Squire.addLinks = addLinks;
 Squire.splitBlock = splitBlock;
 Squire.startSelectionId = startSelectionId;
 Squire.endSelectionId = endSelectionId;
+/*jshint ignore:start */
 
 if ( typeof exports === 'object' ) {
     module.exports = Squire;
