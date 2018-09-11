@@ -13,56 +13,72 @@ var fontSizes = {
 var styleToSemantic = {
     backgroundColor: {
         regexp: notWS,
-        replace: function ( doc, colour ) {
-            return createElement( doc, 'SPAN', {
+        replace: function ( doc, colour, props ) {
+            var inner_props = {
                 'class': HIGHLIGHT_CLASS,
                 style: 'background-color:' + colour
-            });
+            };
+            for (var attr in props) {
+                inner_props[attr] = props[attr];
+            }
+            return createElement( doc, 'SPAN', props);
         }
     },
     color: {
         regexp: notWS,
-        replace: function ( doc, colour ) {
-            return createElement( doc, 'SPAN', {
+        replace: function ( doc, colour, props ) {
+            var inner_props = {
                 'class': COLOUR_CLASS,
                 style: 'color:' + colour
-            });
+            };
+            for (var attr in props) {
+                inner_props[attr] = props[attr];
+            }
+            return createElement( doc, 'SPAN', props);
         }
     },
     fontWeight: {
         regexp: /^bold|^700/i,
-        replace: function ( doc ) {
-            return createElement( doc, 'B' );
+        replace: function ( doc, unused, props ) {
+            return createElement( doc, 'B', props );
         }
     },
     fontStyle: {
         regexp: /^italic/i,
-        replace: function ( doc ) {
-            return createElement( doc, 'I' );
+        replace: function ( doc, unused, props ) {
+            return createElement( doc, 'I', props );
         }
     },
     fontFamily: {
         regexp: notWS,
-        replace: function ( doc, family ) {
-            return createElement( doc, 'SPAN', {
+        replace: function ( doc, family, props  ) {
+            var inner_props = {
                 'class': FONT_FAMILY_CLASS,
                 style: 'font-family:' + family
-            });
+            };
+            for (var attr in props) {
+                inner_props[attr] = props[attr];
+            }
+            return createElement( doc, 'SPAN', props);
         }
     },
     fontSize: {
         regexp: notWS,
-        replace: function ( doc, size ) {
-            return createElement( doc, 'SPAN', {
+        replace: function ( doc, size, props  ) {
+            var inner_props = {
                 'class': FONT_SIZE_CLASS,
                 style: 'font-size:' + size
-            });
+            };
+            for (var attr in props) {
+                inner_props[attr] = props[attr];
+            }
+            return createElement( doc, 'SPAN', props);
         }
     },
     textDecoration: {
         regexp: /^underline/i,
-        replace: function ( doc ) {
-            return createElement( doc, 'U' );
+        replace: function ( doc, unused, props ) {
+            return createElement( doc, 'U', props  );
         }
     }
 };
@@ -85,7 +101,7 @@ var replaceStyles = function ( node, parent ) {
         converter = styleToSemantic[ attr ];
         css = style[ attr ];
         if ( css && converter.regexp.test( css ) ) {
-            el = converter.replace( doc, css );
+            el = converter.replace( doc, css, extractExtraAttributes(node) );
             if ( !newTreeTop ) {
                 newTreeTop = el;
             }
@@ -356,3 +372,23 @@ var cleanupBRs = function ( node, root, keepForBlankLine ) {
         }
     }
 };
+
+function extractExtraAttributes(src) {
+    var result = {};
+    if (src.dataset) {
+        Object.keys(src.dataset).forEach(function(key) {
+            var field = 'data-' + key.replace(
+                /([A-Z])/g,
+                function(m, g) {
+                    return '-' + g.toLowerCase();
+                }
+            );
+            result[field] = src.dataset[key];
+        });
+    }
+
+    if (src.isContentEditable === false) {
+        result.contentEditable = src.isContentEditable;
+    }
+    return result;
+}

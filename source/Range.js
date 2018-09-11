@@ -373,6 +373,18 @@ var moveRangeBoundariesUpTree = function ( range, startMax, endMax, root ) {
         endMax = startMax;
     }
 
+    var notEditable = function(element) {
+        while (element) {
+            if (element.isContentEditable === false) {
+                return true;
+            } else if (element.isContentEditable === true) {
+                return false;
+            }
+            element = element.parentElement;
+        }
+        return false;
+    }
+
     while ( !startOffset &&
             startContainer !== startMax &&
             startContainer !== root ) {
@@ -397,6 +409,14 @@ var moveRangeBoundariesUpTree = function ( range, startMax, endMax, root ) {
         parent = endContainer.parentNode;
         endOffset = indexOf.call( parent.childNodes, endContainer ) + 1;
         endContainer = parent;
+    }
+
+    if (notEditable(startContainer)) {
+        startOffset = 0;
+    }
+
+    if (notEditable(endContainer)) {
+        endOffset = getLength(endContainer);
     }
 
     range.setStart( startContainer, startOffset );
