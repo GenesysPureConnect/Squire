@@ -340,9 +340,14 @@ function fixContainer ( container, root ) {
         isBR = child.nodeName === 'BR';
         if ( !isBR && isInline( child ) ) {
             if ( !wrapper ) {
-                 wrapper = createElement( doc,
-                    config.blockTag, config.blockAttributes );
-                copyExtraAttributes(container, wrapper);
+                var attributes = extractExtraAttributes(container);
+
+                if (config.blockAttributes) {
+                    for (var attr in config.blockAttributes) {
+                        attributes[attr] = config.blockAttributes[attr];
+                    }
+                }
+                wrapper = createElement( doc, config.blockTag, attributes);
             }
             wrapper.appendChild( child );
             i -= 1;

@@ -377,7 +377,7 @@ var moveRangeBoundariesUpTree = function ( range, startMax, endMax, root ) {
         while (element) {
             if (element.isContentEditable === false) {
                 return true;
-            } else if (element.isContentEditable == true) {
+            } else if (element.isContentEditable === true) {
                 return false;
             }
             element = element.parentElement;
