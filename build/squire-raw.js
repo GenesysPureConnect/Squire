@@ -772,6 +772,7 @@ function mergeContainers ( node, root ) {
         fixCursor( prev, root );
     }
 }
+﻿/*jshint strict:false, undef:false, unused:false, latedef:false */
 
 var getNodeBefore = function ( node, offset ) {
     var children = node.childNodes;
@@ -986,6 +987,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         // Remove trailing <br> – we don't want this considered content to be
         // inserted again later
         cleanupBRs( block, root, false );
+        fixCursor(block, root);
         if ( isInline( container ) ) {
             // Split up to block parent.
             nodeAfterSplit = split(
@@ -5189,47 +5191,6 @@ proto.decreaseQuoteLevel = command( 'modifyBlocks', decreaseBlockQuoteLevel );
 proto.makeUnorderedList = command( 'modifyBlocks', makeUnorderedList );
 proto.makeOrderedList = command( 'modifyBlocks', makeOrderedList );
 proto.removeList = command( 'modifyBlocks', removeList );
-
-// Node.js exports
-Squire.isInline = isInline;
-Squire.isBlock = isBlock;
-Squire.isContainer = isContainer;
-Squire.getBlockWalker = getBlockWalker;
-Squire.getPreviousBlock = getPreviousBlock;
-Squire.getNextBlock = getNextBlock;
-Squire.areAlike = areAlike;
-Squire.hasTagAttributes = hasTagAttributes;
-Squire.getNearest = getNearest;
-Squire.isOrContains = isOrContains;
-Squire.detach = detach;
-Squire.replaceWith = replaceWith;
-Squire.empty = empty;
-
-// Range.js exports
-Squire.getNodeBefore = getNodeBefore;
-Squire.getNodeAfter = getNodeAfter;
-Squire.insertNodeInRange = insertNodeInRange;
-Squire.extractContentsOfRange = extractContentsOfRange;
-Squire.deleteContentsOfRange = deleteContentsOfRange;
-Squire.insertTreeFragmentIntoRange = insertTreeFragmentIntoRange;
-Squire.isNodeContainedInRange = isNodeContainedInRange;
-Squire.moveRangeBoundariesDownTree = moveRangeBoundariesDownTree;
-Squire.moveRangeBoundariesUpTree = moveRangeBoundariesUpTree;
-Squire.getStartBlockOfRange = getStartBlockOfRange;
-Squire.getEndBlockOfRange = getEndBlockOfRange;
-Squire.contentWalker = contentWalker;
-Squire.rangeDoesStartAtBlockBoundary = rangeDoesStartAtBlockBoundary;
-Squire.rangeDoesEndAtBlockBoundary = rangeDoesEndAtBlockBoundary;
-Squire.expandRangeToBlockBoundaries = expandRangeToBlockBoundaries;
-
-// Clipboard.js exports
-Squire.onPaste = onPaste;
-
-// Editor.js exports
-Squire.addLinks = addLinks;
-Squire.splitBlock = splitBlock;
-Squire.startSelectionId = startSelectionId;
-Squire.endSelectionId = endSelectionId;
 
 if ( typeof exports === 'object' ) {
     module.exports = Squire;

@@ -1,4 +1,4 @@
-/*jshint strict:false, undef:false, unused:false, latedef:false */
+﻿/*jshint strict:false, undef:false, unused:false, latedef:false */
 
 var getNodeBefore = function ( node, offset ) {
     var children = node.childNodes;
@@ -213,6 +213,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         // Remove trailing <br> – we don't want this considered content to be
         // inserted again later
         cleanupBRs( block, root, false );
+        fixCursor(block, root);
         if ( isInline( container ) ) {
             // Split up to block parent.
             nodeAfterSplit = split(
