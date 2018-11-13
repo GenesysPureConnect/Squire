@@ -1,6 +1,6 @@
 task :default => ["build/squire.js"]
 
-SRC = ["source/intro.js", "source/Constants.js", "source/TreeWalker.js", "source/Node.js", "source/Range.js", "source/KeyHandlers.js", "source/Clean.js", "source/Clipboard.js", "source/Editor.js", "source/outro.js"]
+SRC = ["source/intro.js", "source/Constants.js", "source/TreeWalker.js", "source/Node.js", "source/Range.js", "source/KeyHandlers.js", "source/Clean.js", "source/Clipboard.js", "source/Editor.js", "source/exports.js", "source/outro.js"]
 
 task :concatenate_js => SRC do
     out = ""
