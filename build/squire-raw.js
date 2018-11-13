@@ -772,6 +772,7 @@ function mergeContainers ( node, root ) {
         fixCursor( prev, root );
     }
 }
+﻿/*jshint strict:false, undef:false, unused:false, latedef:false */
 
 var getNodeBefore = function ( node, offset ) {
     var children = node.childNodes;
@@ -986,6 +987,8 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
         // Remove trailing <br> – we don't want this considered content to be
         // inserted again later
         cleanupBRs( block, root, false );
+        // Add trailing <br> - for apps like InteractionDesktop, which needs <br> element at end of each block
+        fixCursor(block, root);
         if ( isInline( container ) ) {
             // Split up to block parent.
             nodeAfterSplit = split(
