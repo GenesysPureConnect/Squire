@@ -954,7 +954,9 @@ var deleteContentsOfRange = function ( range, root ) {
 // After method, range will be around inserted content
 var insertTreeFragmentIntoRange = function ( range, frag, root ) {
     var node, block, blockContentsAfterSplit, stopPoint, container, offset;
-    var nodeAfterSplit, nodeBeforeSplit, tempRange;
+    var replaceBlock, firstBlockInFrag, nodeAfterSplit, nodeBeforeSplit;
+    var tempRange;
+    var firstInFragIsInline = frag.firstChild && isInline( frag.firstChild );
 
     // Fixup content: ensure no top-level inline, and add cursor fix elements.
     fixContainer( frag, root );
@@ -978,8 +980,14 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
     // Merge the contents of the first block in the frag with the focused block.
     // If there are contents in the block after the focus point, collect this
     // up to insert in the last block later
-    block = getStartBlockOfRange( range );
-    if ( block ) {
+    block = getStartBlockOfRange( range, root );
+    firstBlockInFrag = getNextBlock( frag, frag );
+    replaceBlock = !firstInFragIsInline && !!block && isEmptyBlock( block );
+
+    if ( block && firstBlockInFrag && !replaceBlock &&
+            // Don't merge table cells or PRE elements into block
+            !getNearest( firstBlockInFrag, frag, 'PRE' ) &&
+            !getNearest( firstBlockInFrag, frag, 'TABLE' ) ) {
         moveRangeBoundariesUpTree( range, block, block, root );
         range.collapse( true ); // collapse to start
         container = range.endContainer;
@@ -1005,7 +1013,7 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
             }
         }
         // And merge the first block in.
-        mergeWithBlock( container, getNextBlock( frag, frag ), range, root );
+        mergeWithBlock( container, firstBlockInFrag, range, root );
 
         // And where we will insert
         offset = indexOf.call( container.parentNode.childNodes, container ) + 1;
@@ -1015,6 +1023,12 @@ var insertTreeFragmentIntoRange = function ( range, frag, root ) {
 
     // Is there still any content in the fragment?
     if ( getLength( frag ) ) {
+        if ( replaceBlock ) {
+            range.setEndBefore( block );
+            range.collapse( false );
+            detach( block );
+        }
+
         moveRangeBoundariesUpTree( range, stopPoint, stopPoint, root );
         // Now split after block up to blockquote (if a parent) or root
         nodeAfterSplit = split(
@@ -3932,7 +3946,8 @@ proto.changeFormat = function ( add, remove, range, partial ) {
 var tagAfterSplit = {
     DT:  'DD',
     DD:  'DT',
-    LI:  'LI'
+    LI:  'LI',
+    PRE: 'PRE'
 };
 
 var splitBlock = function ( self, block, node, offset ) {

@@ -1261,7 +1261,8 @@ proto.changeFormat = function ( add, remove, range, partial ) {
 var tagAfterSplit = {
     DT:  'DD',
     DD:  'DT',
-    LI:  'LI'
+    LI:  'LI',
+    PRE: 'PRE'
 };
 
 var splitBlock = function ( self, block, node, offset ) {
